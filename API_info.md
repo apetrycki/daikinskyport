@@ -1,52 +1,72 @@
 The first step to interfacing with a Daikin Skyport thermostat is to login:
-
+```
 curl --location --request POST "https://api.daikinskyport.com/users/auth/login" \
 --header "Accept: application/json" \
 --header "Content-Type: application/json" \
 --data '{"email": "<email>", "password": "<password>"}'
+```
 
 This uses the email and password registered with the DaikinOne+ Home app to connect and returns access and refresh tokens:
+```
 {"accessToken":"<token>","accessTokenExpiresIn":3600,"refreshToken":"<token>","tokenType":"Bearer"}
+```
 
 You can now verify your access token by running:
+```
 curl --location --request GET "https://api.daikinskyport.com/users/me" \
 --header "Accept: application/json" \
 --header "Authorization: Bearer <access token>"
+```
 
 Which returns:
+```
 {"id":"<some UUID-type string>","name":"<first> #<last>","email":"<email>"}
+```
 
 To refresh a token:
+```
 curl --location --request POST "https://api.daikinskyport.com/users/auth/token" \
 --header "Accept: application/json" \
 --header "Content-Type: application/json" \
 --data '{"email": "<email>", "refreshToken": "<refresh token>"}'
+```
 
 Once you have an access token, you can connect and retrieve what locations are available to the account:
+```
 curl --location --request GET "https://api.daikinskyport.com/locations" \
 --header "Accept: application/json" \
 --header "Authorization: Bearer <access token>"
+```
 
 which returns:
+```
 [{"id":"<UUID of location>","name":"<Location Name>","address":"<street address>","city":"<city>",
 "province":"<state/province>","postalCode":"<zip code>",
 "country":"<country>","timeZone":"America/New_York","latitude":<lat>,"longitude":<long>,"hasOwner":true}]
+```
 
 And retrieve the devices:
+```
 curl --location --request GET "https://api.daikinskyport.com/devices" \
 --header "Accept: application/json" \
 --header "Authorization: Bearer <access token>"
+```
 
 Which returns:
+```
 [{"id":"<UUID of the device>","locationId":"<UUID of location>","name":"<name of device>",
 "model":"ONEPLUS","firmwareVersion":"1.4.5","createdDate":1563568617,"hasOwner":true,"hasWrite":true}]
+```
 
 Once you know the device ID, you can use it to probe the device:
+```
 curl --location --request GET "https://api.daikinskyport.com/deviceData/<UUID of device>" \
 --header "Accept: application/json" \
 --header "Authorization: Bearer <access token>"
+```
 
 Which returns (truncated):
+```
 {"sysFault7Date":0,
 "quietModeActive":1,
 "alertDehumFilterRuntime":0,
@@ -80,6 +100,7 @@ Which returns (truncated):
 "messageHistory7Type":0,
 "equipmentCapability":0,
 "statType":"production"}
+```
 
 There are almost 900 elements when I probe my thermostat.  Some abbreviations used when looking at the data:
 ct = cooling temperature
