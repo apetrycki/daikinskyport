@@ -43,7 +43,7 @@ class DaikinSkyport(object):
         if config is None:
             self.file_based_config = True
             if config_filename is None:
-                if user_email is None || user_password is None:
+                if (user_email is None) or (user_password is None):
                     logger.error("Error. No user email or password was supplied.")
                     return
                 jsonconfig = {"USER_EMAIL": user_email, "USER_PASSWORD": user_password}
@@ -130,7 +130,7 @@ class DaikinSkyport(object):
                 return None
 
     def get_thermostat_info(self, deviceid):
-        ''' Set self.thermostats to a json list of thermostats from daikinskyport.com '''
+        ''' Retrieve the device info for the specific device '''
         url = 'https://api.daikinskyport.com/deviceData/' + deviceid
         header = {'Content-Type': 'application/json;charset=UTF-8',
                   'Authorization': 'Bearer ' + self.access_token}
@@ -152,9 +152,9 @@ class DaikinSkyport(object):
             else:
                 return None
 
-    def get_thermostat(self, index):
-        ''' Return a single thermostat based on index '''
-        return self.thermostats[index]
+    def get_thermostat(self, name):
+        ''' Return a single thermostat based on name '''
+        return self.thermostats[name]
 
 '''    def get_remote_sensors(self, index):'''
         ''' Return remote sensors based on index '''
@@ -174,8 +174,8 @@ class DaikinSkyport(object):
         ''' Get new thermostat data from daikin skyport '''
         self.get_thermostats()
 
-    def make_request(self, body, log_msg_action, *, retry_count=0):
-        url = 'https://api.daikinskyport.com/deviceData/' + self.thermostat.id
+    def make_request(self, deviceID, body, log_msg_action, *, retry_count=0):
+        url = 'https://api.daikinskyport.com/deviceData/' + deviceID
         header = {'Content-Type': 'application/json;charset=UTF-8',
                   'Authorization': 'Bearer ' + self.access_token}
         params = {}
@@ -189,78 +189,66 @@ class DaikinSkyport(object):
         elif (request.status_code == 401 and retry_count == 0 and
               request.json()['error'] == 'authorization_expired'):
             if self.refresh_tokens():
-                return self.make_request(body, log_msg_action,
+                return self.make_request(body, deviceID, log_msg_action,
                                          retry_count=retry_count + 1)
         else:
             logger.info(
-                "Error fetching data from Ecobee while attempting to %s: %s",
+                "Error fetching data from Daikin Skyport while attempting to %s: %s",
                 log_msg_action, request.json())
             return None
 
-    def set_hvac_mode(self, index, hvac_mode):
-        ''' possible hvac modes are auto, auxHeatOnly, cool, heat, off '''
-        body = {"selection": {"selectionType": "thermostats",
-                              "selectionMatch": self.thermostats[index]['identifier']},
-                              "thermostat": {
-                                  "settings": {
-                                      "hvacMode": hvac_mode
-                                  }
-                              }}
+    def set_hvac_mode(self, deviceID, hvac_mode):
+        ''' possible hvac modes are auto (3), auxHeatOnly (4), cool (2), heat (1), off (0) '''
+        body = {"mode": hvac_mode}
         log_msg_action = "set HVAC mode"
-        return self.make_request(body, log_msg_action)
+        return self.make_request(deviceID, body, log_msg_action)
 
-    def set_fan_min_on_time(self, index, fan_min_on_time):
-        ''' The minimum time, in minutes, to run the fan each hour. Value from 1 to 60 '''
-        body = {"selection": {"selectionType": "thermostats",
-                        "selectionMatch": self.thermostats[index]['identifier']},
-                        "thermostat": {
-                            "settings": {
-                                "fanMinOnTime": fan_min_on_time
-                            }
-                        }}
+    def set_fan_schedule(self, deviceID, start_time, end_time, duration):
+        ''' Schedule to run the fan.  
+        start_time is the beginning of the schedule per day.  It is an integer value where every 15 minutes from 00:00 is 1 (each hour = 4)
+        end_time is the end of the schedule each day.  Values are same as start_time
+        duration is the run time per hour of the schedule. Options are on the full time (0), 5mins (1), 15mins (2), 30mins (3), and 45mins (4) '''
+        body = {"fanCirculateDuration" : duration,
+                "fanCirculateStart" : start_time,
+                "fanCirculateStop" : end_time
+               }
         log_msg_action = "set fan minimum on time."
-        return self.make_request(body, log_msg_action)
+        return self.make_request(deviceID, body, log_msg_action)
 
-    def set_fan_mode(self, index, fan_mode, cool_temp, heat_temp, hold_type="nextTransition"):
-        ''' Set fan mode. Values: auto, minontime, on '''
-        body = {"selection": {
-                    "selectionType": "thermostats",
-                    "selectionMatch": self.thermostats[index]['identifier']},
-                "functions": [{"type": "setHold", "params": {
-                    "holdType": hold_type,
-                    "coolHoldTemp": int(cool_temp * 10),
-                    "heatHoldTemp": int(heat_temp * 10),
-                    "fan": fan_mode
-                }}]}
+    def set_fan_mode(self, deviceID, fan_mode, cool_temp, heat_temp, hold_type="nextTransition"):
+        ''' Set fan mode. Values: auto (0), schedule (2), on (1) '''
+        body = {"fanCirculate": fan_mode}
         log_msg_action = "set fan mode"
-        return self.make_request(body, log_msg_action)
+        return self.make_request(deviceID, body, log_msg_action)
 
-    def set_hold_temp(self, index, cool_temp, heat_temp,
-                      hold_type="nextTransition"):
+    def set_fan_clean(self, deviceID, active):
+        ''' Enable/disable fan clean mode.  This runs the fan at high speed to clear out the air.
+        active values are true/false'''
+        body = {"oneCleanFanActive": active}
+        log_msg_action = "set fan clean mode"
+        return self.make_request(deviceID, body, log_msg_action)
+
+    def set_hold_temp(self, deviceID, cool_temp, heat_temp,
+                      hold_type=NEXT_SCHEDULE):
         ''' Set a hold '''
-        body = {"selection": {
-                    "selectionType": "thermostats",
-                    "selectionMatch": self.thermostats[index]['identifier']},
-                "functions": [{"type": "setHold", "params": {
-                    "holdType": hold_type,
-                    "coolHoldTemp": int(cool_temp * 10),
-                    "heatHoldTemp": int(heat_temp * 10)
-                }}]}
+        body = {"hspHome" : heat_temp,
+                "cspHome" : cool_temp,
+                "schedOverride" : hold_type '''Need to verify this one'''
+               }
         log_msg_action = "set hold temp"
-        return self.make_request(body, log_msg_action)
+        return self.make_request(deviceID, body, log_msg_action)
 
-    def set_climate_hold(self, index, climate, hold_type="nextTransition"):
-        ''' Set a climate hold - ie away, home, sleep '''
-        body = {"selection": {
-                    "selectionType": "thermostats",
-                    "selectionMatch": self.thermostats[index]['identifier']},
-                "functions": [{"type": "setHold", "params": {
-                    "holdType": hold_type,
-                    "holdClimateRef": climate
-                }}]}
+    def set_climate_hold(self, deviceID, active, hold_type=NEXT_SCHEDULE):
+        ''' Set a climate hold - ie enable/disable schedule. 
+        active values are true/false
+        hold_type is NEXT_SCHEDULE or PERMANENT_HOLD'''
+        body = {"schedEnabled" : active,
+                "schedOverride" : hold_type
+               }
         log_msg_action = "set climate hold"
-        return self.make_request(body, log_msg_action)
+        return self.make_request(deviceID, body, log_msg_action)
 
+''' TBD '''
     def delete_vacation(self, index, vacation):
         ''' Delete the vacation with name vacation '''
         body = {"selection": {
@@ -273,18 +261,14 @@ class DaikinSkyport(object):
         log_msg_action = "delete a vacation"
         return self.make_request(body, log_msg_action)
 
-    def resume_program(self, index, resume_all=False):
+    def resume_program(self, deviceID, resume_sched=False):
         ''' Resume currently scheduled program '''
-        body = {"selection": {
-                    "selectionType": "thermostats",
-                    "selectionMatch": self.thermostats[index]['identifier']},
-                "functions": [{"type": "resumeProgram", "params": {
-                    "resumeAll": resume_all
-                }}]}
+        body = {"schedEnabled" : resume_sched}
 
         log_msg_action = "resume program"
-        return self.make_request(body, log_msg_action)
+        return self.make_request(deviceID, body, log_msg_action)
 
+''' TBD if this is supported '''
     def send_message(self, index, message="Hello from python-ecobee!"):
         ''' Send a message to the thermostat '''
         body = {"selection": {
@@ -297,64 +281,10 @@ class DaikinSkyport(object):
         log_msg_action = "send message"
         return self.make_request(body, log_msg_action)
 
-    def set_humidity(self, index, humidity):
+    def set_humidity(self, deviceID, humidity):
         ''' Set humidity level'''
-        body = {"selection": {"selectionType": "thermostats",
-                              "selectionMatch": self.thermostats[index]['identifier']},
-                              "thermostat": {
-                                  "settings": {
-                                      "humidity": int(humidity)
-                                  }
-                              }}
+        body = {"dehumSP" : humidity}
 
         log_msg_action = "set humidity level"
-        return self.make_request(body, log_msg_action)
+        return self.make_request(deviceID, body, log_msg_action)
 
-    def set_mic_mode(self, index, mic_enabled):
-        '''Enable/disable Alexa mic (only for Ecobee 4)
-        Values: True, False
-        '''
-
-        body = {
-            'selection': {
-                'selectionType': 'thermostats',
-                'selectionMatch': self.thermostats[index]['identifier']},
-            'thermostat': {
-                'audio': {
-                    'microphoneEnabled': mic_enabled}}}
-
-        log_msg_action = 'set mic mode'
-        return self.make_request(body, log_msg_action)
-
-    def set_occupancy_modes(self, index, auto_away=None, follow_me=None):
-        '''Enable/disable Smart Home/Away and Follow Me modes
-        Values: True, False
-        '''
-
-        body = {
-            'selection': {
-                'selectionType': 'thermostats',
-                'selectionMatch': self.thermostats[index]['identifier']},
-            'thermostat': {
-                'settings': {
-                    'autoAway': auto_away,
-                    'followMeComfort': follow_me}}}
-
-        log_msg_action = 'set occupancy modes'
-        return self.make_request(body, log_msg_action)
-
-    def set_dst_mode(self, index, dst):
-        '''Enable/disable daylight savings
-        Values: True, False
-        '''
-
-        body = {
-            'selection': {
-                'selectionType': 'thermostats',
-                'selectionMatch': self.thermostats[index]['identifier']},
-            'thermostat': {
-                'location': {
-                    'isDaylightSaving': dst}}}
-
-        log_msg_action = 'set dst mode'
-        return self.make_request(body, log_msg_action)
