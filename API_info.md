@@ -115,19 +115,26 @@ How times work:
 They decided to be weird with how times work. Basically every 1=15mins. So midnight (00:00) is 0, 00:15=1, 08:00=8x4=32, etc.
 
 Set the operating mode:
+```
 “mode”: 2 is cool, 3 is auto, 1 is heat, 0 is off, emergency heat is 4
+```
 
 Set screen brightness:
+```
 “displayBrightness”: 0-100, percentage
+```
 
 Night mode:
+```
 “nightModeEnabled”: True/False
 “nightModeLightBarAllowed”: true/false
 “nightModeStart”: (see times)
 “nightModeStop”: (see times)
 “nightModeActive”: True/False (read only status)
+```
 
 Sensors:
+```
 “tempIndoor”: in C
 “tempOutdoor”: in C
 “humIndoor”: in %
@@ -139,10 +146,13 @@ Sensors:
 “ctAHFanCurrentDemandStatus”: looks like a %, current fan demand
 “ctAHFanRequestedDemand”: looks like a %, the requested fan demand by thermostat
 “ctAHCurrentIndoorAirflow”: maybe CFM?, current airflow
+```
 
 There are plenty of other sensors, but those are probably the most relevant to most people.
 
 Fan:
+```
 “fanCirculate”: 0=off, 1=always on, 2=schedule, manual fan control
 “oneCleanFanActive”: true/false runs the fan at high speed for 3 hours
 “fanCirculateDuration”: 0=entire schedule, 1=5mins, 2=15mins, 3=30mins, 4=45mins runs the fan for this amount of time every hour in schedule
+```
