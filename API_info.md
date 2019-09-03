@@ -126,7 +126,7 @@ curl --location --request PUT "https://api.daikinskyport.com/deviceData/<device 
 
 Set a temperature hold:
 ```
-"geofencingAway": Set whether geofencing is used, true/false
+"geofencingAway": Set whether geofencing is in away mode, true/false
 "schedEnabled": Set if thermostat goes off schedule or manual set point, true=schedule, false=set point
 "schedOverride": integer, unknown (TBD)
 "cspHome": cooling set point, temperature in C, one decimal place
@@ -145,11 +145,10 @@ Set screen brightness:
 
 Night mode:
 ```
-“nightModeEnabled”: True/False
+“nightModeEnabled”: Enable night mode, True/False
 “nightModeLightBarAllowed”: true/false
 “nightModeStart”: (see times)
 “nightModeStop”: (see times)
-“nightModeActive”: True/False (read only status)
 ```
 
 Sensors:
@@ -158,6 +157,17 @@ Sensors:
 “tempOutdoor”: current outdoor temperature, in C
 “humIndoor”: current indoor humidity, in %
 “humOutdoor”: current outdoor humidity, in %
+"cspActive": current cooling set point, in C
+"hspActive": current heating set point, in C
+"cspSched": current cooling set point for the schedule, in C
+"hspSched": current heating set point for the schedule, in C
+"fanCirculateActive": current status of fan circulation, true/false
+"oneCleanFanActive": current status of One Clean Fan, true/false
+“nightModeActive”: current status of night mode, True/False
+“weatherTodayTempC”: forecast of the temps for today
+“weatherTodayIcon”: tstorms, partlycloudy, (these are all I have right now)
+“weatherTodayCond”: text description of conditions
+“weatherTodayHum”: humidity forecast
 “weatherDay[n]TempC”: forecast of the temps for days 1-5 (ex. weatherDay1TempC)
 “weatherDay[n]Icon”: tstorms, partlycloudy, (these are all I have right now)
 “weatherDay[n]Cond”: text description of conditions
@@ -173,10 +183,15 @@ There are plenty of other sensors, but those are probably the most relevant to m
 Fan:
 ```
 “fanCirculate”: 0=off, 1=always on, 2=schedule, manual fan control
+“fanCirculateDuration”: 0=entire schedule, 1=5mins, 2=15mins, 3=30mins, 4=45mins runs the fan for this amount of time every hour in schedule
+```
+
+OneClean (Air Quality) settings:
+```
 “oneCleanFanActive”: true/false runs the fan at high speed for 3 hours
 "oneCleanFanSpeed": fan clean fan speed, integer, unknown (TBD)
 "oneCleanFanDuration": duration of fan clean, integer, hours
-“fanCirculateDuration”: 0=entire schedule, 1=5mins, 2=15mins, 3=30mins, 4=45mins runs the fan for this amount of time every hour in schedule
+"oneCleanParticleTrigger": particulate sensor threshold to run air cleaning, integer
 ```
 
 Schedule:
@@ -187,6 +202,8 @@ Schedule:
 "sched[DoW]Part[n]csp": cooling set point, temperature in C, one decimal place
 "sched[DoW]Part[n]Enabled": enable or disable the schedule block, true/false
 "sched[DoW]Part[n]hsp": heating set point, temperature in C, one decimal place
+"schedOverrideDuration": how long the manual set point should last, time? (TBD)
+"schedEnabled": set if the schedule is enabled or manual set point, true/false
 ```
 [DoW]: Day of week - Mon, Tue, Wed, Thu, Fri, Sat, Sun
 [n]: Sequential number from 1 to 4 used to associate the parameters to the schedule block
@@ -194,4 +211,11 @@ Schedule:
 Humidity Settings:
 ```
 "humSP": humidity set point, percent
+"dehumSP": dehumidification set point, percent
 ```
+
+Away Settings:
+```
+"hspAway": heat set point while away, temperature in C, one decimal place
+"cspAway": cooling set point while away, temperature in C, one decimal place
+"geofencingEnabled": set if geofencing is enabled for away settings, true/false
