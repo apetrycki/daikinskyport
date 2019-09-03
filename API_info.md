@@ -103,6 +103,7 @@ Which returns (truncated):
 ```
 
 There are almost 900 elements when I probe my thermostat.  Some abbreviations used when looking at the data:
+```
 ct = cooling temperature
 ht = heating temperature
 sp = set point
@@ -110,6 +111,7 @@ csp = cooling set point
 hsp = heating set point
 sched = schedule
 hum = humidity/humidifier
+```
 
 How times work:
 They decided to be weird with how times work. Basically every 1=15mins. So midnight (00:00) is 0, 00:15=1, 08:00=8x4=32, etc.
