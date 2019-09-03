@@ -116,6 +116,14 @@ hum = humidity/humidifier
 How times work:
 They decided to be weird with how times work. Basically every 1=15mins. So midnight (00:00) is 0, 00:15=1, 08:00=8x4=32, etc.
 
+To set configuration (example of setting a hold):
+```
+curl --location --request PUT "https://api.daikinskyport.com/deviceData/<device UUID>" \
+--header "Accept: application/json" \
+--header "Content-Type: application/json" \
+--data '{"geofencingAway": "False", "schedEnabled": "False","schedOverride":0,"cspHome":24.4}'
+```
+
 Set the operating mode:
 ```
 “mode”: 2 is cool, 3 is auto, 1 is heat, 0 is off, emergency heat is 4
