@@ -116,12 +116,21 @@ hum = humidity/humidifier
 How times work:
 They decided to be weird with how times work. Basically every 1=15mins. So midnight (00:00) is 0, 00:15=1, 08:00=8x4=32, etc.
 
-To set configuration (example of setting a hold):
+To set configuration:
 ```
 curl --location --request PUT "https://api.daikinskyport.com/deviceData/<device UUID>" \
 --header "Accept: application/json" \
 --header "Content-Type: application/json" \
 --data '{"geofencingAway": "False", "schedEnabled": "False","schedOverride":0,"cspHome":24.4}'
+```
+
+Set a temperature hold:
+```
+"geofencingAway": Set whether geofencing is used, true/false
+"schedEnabled": Set if thermostat goes off schedule or manual set point, true=schedule, false=set point
+"schedOverride": integer, unknown (TBD)
+"cspHome": cooling set point, temperature in C, one decimal place
+"hspHome": heating set point, temperature in C, one decimal place
 ```
 
 Set the operating mode:
@@ -145,18 +154,19 @@ Night mode:
 
 Sensors:
 ```
-“tempIndoor”: in C
-“tempOutdoor”: in C
-“humIndoor”: in %
-“humOutdoor”: in %
-“weatherDay[1-5]TempC”: forecast of the temps for days 1-5 (ex. weatherDay1TempC)
-“weatherDay[1-5]Icon”: tstorms, partlycloudy, (these are all I have right now)
-“weatherDay[1-5]Cond”: text description of conditions
-“weatherDay[1-5]Hum”: humidity forecast
+“tempIndoor”: current indoor temperature, in C
+“tempOutdoor”: current outdoor temperature, in C
+“humIndoor”: current indoor humidity, in %
+“humOutdoor”: current outdoor humidity, in %
+“weatherDay[n]TempC”: forecast of the temps for days 1-5 (ex. weatherDay1TempC)
+“weatherDay[n]Icon”: tstorms, partlycloudy, (these are all I have right now)
+“weatherDay[n]Cond”: text description of conditions
+“weatherDay[n]Hum”: humidity forecast
 “ctAHFanCurrentDemandStatus”: looks like a %, current fan demand
 “ctAHFanRequestedDemand”: looks like a %, the requested fan demand by thermostat
 “ctAHCurrentIndoorAirflow”: maybe CFM?, current airflow
 ```
+[n]: Forecast day 1 through 5
 
 There are plenty of other sensors, but those are probably the most relevant to most people.
 
@@ -164,5 +174,24 @@ Fan:
 ```
 “fanCirculate”: 0=off, 1=always on, 2=schedule, manual fan control
 “oneCleanFanActive”: true/false runs the fan at high speed for 3 hours
+"oneCleanFanSpeed": fan clean fan speed, integer, unknown (TBD)
+"oneCleanFanDuration": duration of fan clean, integer, hours
 “fanCirculateDuration”: 0=entire schedule, 1=5mins, 2=15mins, 3=30mins, 4=45mins runs the fan for this amount of time every hour in schedule
+```
+
+Schedule:
+```
+"sched[DoW]Part[n]Label": text label
+"sched[DoW]Part[n]Action": integer, currently unknown (TBD)
+"sched[DoW]Part[n]Time": integer time (see time note)
+"sched[DoW]Part[n]csp": cooling set point, temperature in C, one decimal place
+"sched[DoW]Part[n]Enabled": enable or disable the schedule block, true/false
+"sched[DoW]Part[n]hsp": heating set point, temperature in C, one decimal place
+```
+[DoW]: Day of week - Mon, Tue, Wed, Thu, Fri, Sat, Sun
+[n]: Sequential number from 1 to 4 used to associate the parameters to the schedule block
+
+Humidity Settings:
+```
+"humSP": humidity set point, percent
 ```
