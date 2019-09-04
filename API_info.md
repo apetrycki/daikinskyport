@@ -226,6 +226,7 @@ Determining unit capabilities:
 "ctOutdoorNoofCoolStages": number of cooling stages, integer
 "ctOutdoorNoofHeatStages": number of heating stages, integer
 "ctSystemCapEmergencyHeat": true if heating element is installed
+"modeEmHeatAvailable":true if Emergency Heat mode is enabled,
 ```
 
 
