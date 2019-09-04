@@ -219,3 +219,10 @@ Away Settings:
 "hspAway": heat set point while away, temperature in C, one decimal place
 "cspAway": cooling set point while away, temperature in C, one decimal place
 "geofencingEnabled": set if geofencing is enabled for away settings, true/false
+
+Determining unit capabilities:
+"ctOutdoorNoofCoolStages": number of cooling stages, integer
+"ctOutdoorNoofHeatStages": number of heating stages, integer
+"ctSystemCapEmergencyHeat": true if heating element is installed
+
+
