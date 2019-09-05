@@ -153,7 +153,7 @@ Night mode:
 
 Sensors:
 ```
-"equipmentStatus": the running state of the system, 1=cooling, 2=overcool dehumidifying, 3=heating, 4=?, 5=idle, 
+"equipmentStatus": the running state of the system, 1=cooling, 2=overcool dehumidifying, 3=heating, 4=fan, 5=idle, 
 “tempIndoor”: current indoor temperature, in C
 “tempOutdoor”: current outdoor temperature, in C
 “humIndoor”: current indoor humidity, in %
