@@ -194,6 +194,7 @@ class Thermostat(ClimateDevice):
         self.data = data
         self.thermostat_index = thermostat_index
         self.thermostat = self.data.daikinskyport.get_thermostat(self.thermostat_index)
+        _LOGGER.error("Thermostat: %s", self.thermostat)
         self._name = self.thermostat["name"]
         self.hold_temp = hold_temp
         self.vacation = None
