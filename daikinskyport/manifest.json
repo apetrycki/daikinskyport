@@ -1,0 +1,9 @@
+{
+  "domain": "daikinskyport",
+  "name": "Daikin Skyport",
+  "documentation": "https://www.home-assistant.io/components/daikinskyport",
+  "config_flow": true,
+  "requirements": [],
+  "dependencies": ["configurator"],
+  "codeowners": []
+}
