@@ -74,9 +74,11 @@ class DaikinSkyport(object):
     def request_tokens(self):
         ''' Method to request API tokens from skyport '''
         url = 'https://api.daikinskyport.com/users/auth/login'
-        params = {'email': self.user_email, 'password': self.user_password}
+        header = {'Accept': 'application/json',
+                  'Content-Type': 'application/json'}
+        data = json.dumps({"email": self.user_email, "password": self.user_password})
         try:
-            request = requests.post(url, params=params)
+            request = requests.post(url, headers=header, data=data)
         except RequestException:
             logger.warn("Error connecting to Daikin Skyport.  Possible connectivity outage."
                         "Could not request token.")
@@ -93,9 +95,11 @@ class DaikinSkyport(object):
     def refresh_tokens(self):
         ''' Method to refresh API tokens from daikinskyport.com '''
         url = 'https://api.daikinskyport.com/users/auth/token'
-        params = {'email': self.user_email,
-                  'refreshToken': self.refresh_token}
-        request = requests.post(url, params=params)
+        header = {'Accept': 'application/json',
+                  'Content-Type': 'application/json'}
+        data = json.dumps({'email': self.user_email,
+                  'refreshToken': self.refresh_token})
+        request = requests.post(url, headers=header, data=data)
         if request.status_code == requests.codes.ok:
             self.access_token = request.json()['accessToken']
             self.refresh_token = request.json()['refreshToken']
@@ -119,7 +123,9 @@ class DaikinSkyport(object):
             self.authenticated = True
             self.thermostatlist = request.json()
             for thermostat in self.thermostatlist:
-                self.thermostats.append(get_thermostat_info(thermostat['id']))
+                thermostat_info = self.get_thermostat_info(thermostat['id'])
+                thermostat_info['name'] = thermostat['name']
+                self.thermostats.append(thermostat_info)
             return self.thermostats
         else:
             self.authenticated = False
@@ -155,6 +161,7 @@ class DaikinSkyport(object):
 
     def get_thermostat(self, index):
         ''' Return a single thermostat based on index '''
+        logger.error("Get Thermostat.")
         return self.thermostats[index]
 
     """
@@ -168,10 +175,13 @@ class DaikinSkyport(object):
         config = dict()
         config['ACCESS_TOKEN'] = self.access_token
         config['REFRESH_TOKEN'] = self.refresh_token
+        config['EMAIL'] = self.user_email
+        config['PASSWORD'] = self.user_password
         if self.file_based_config:
             config_from_file(self.config_filename, config)
         else:
             self.config = config
+            logger.error("config: %s", self.config)
 
     def update(self):
         ''' Get new thermostat data from daikin skyport '''
