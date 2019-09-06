@@ -4,10 +4,11 @@ import json
 import os
 import logging
 
-from requests.exceptions import RequestException;
+from requests.exceptions import RequestException
 
 logger = logging.getLogger('daikinskyport')
 
+NEXT_SCHEDULE = 1
 
 def config_from_file(filename, config=None):
     ''' Small configuration file management function'''
@@ -46,14 +47,14 @@ class DaikinSkyport(object):
                 if (user_email is None) or (user_password is None):
                     logger.error("Error. No user email or password was supplied.")
                     return
-                jsonconfig = {"USER_EMAIL": user_email, "USER_PASSWORD": user_password}
+                jsonconfig = {"EMAIL": user_email, "PASSWORD": user_password}
                 config_filename = 'daikinskyport.conf'
                 config_from_file(config_filename, jsonconfig)
             config = config_from_file(config_filename)
         else:
             self.file_based_config = False
-        self.user_email = config['USER_EMAIL']
-        self.user_password = config['USER_PASSWORD']
+        self.user_email = config['EMAIL']
+        self.user_password = config['PASSWORD']
         self.config_filename = config_filename
 
         if 'ACCESS_TOKEN' in config:
@@ -86,7 +87,7 @@ class DaikinSkyport(object):
             self.write_tokens_to_file()
         else:
             logger.warn('Error while requesting tokens from daikinskyport.com.'
-                  ' Status code: ' + str(request.status_code))
+                        ' Status code: ' + str(request.status_code))
             return
 
     def refresh_tokens(self):
@@ -118,12 +119,12 @@ class DaikinSkyport(object):
             self.authenticated = True
             self.thermostatlist = request.json()
             for thermostat in self.thermostatlist:
-            self.thermostats[thermostat['name']]=get_thermostat_info(deviceid=thermostat['id'])
+                self.thermostats.append(get_thermostat_info(thermostat['id']))
             return self.thermostats
         else:
             self.authenticated = False
             logger.info("Error connecting to Daikin Skyport while attempting to get "
-                  "thermostat data.  Refreshing tokens and trying again.")
+                        "thermostat data.  Refreshing tokens and trying again.")
             if self.refresh_tokens():
                 return self.get_thermostats()
             else:
@@ -146,19 +147,21 @@ class DaikinSkyport(object):
         else:
             self.authenticated = False
             logger.info("Error connecting to Daikin Skyport while attempting to get "
-                  "thermostat data.  Refreshing tokens and trying again.")
+                        "thermostat data.  Refreshing tokens and trying again.")
             if self.refresh_tokens():
                 return self.get_thermostat_info()
             else:
                 return None
 
-    def get_thermostat(self, name):
-        ''' Return a single thermostat based on name '''
-        return self.thermostats[name]
+    def get_thermostat(self, index):
+        ''' Return a single thermostat based on index '''
+        return self.thermostats[index]
 
-'''    def get_remote_sensors(self, index):'''
+    """
+    def get_remote_sensors(self, index):
         ''' Return remote sensors based on index '''
-'''        return self.thermostats[index]['remoteSensors']'''
+        return self.thermostats[index]['remoteSensors']
+    """
 
     def write_tokens_to_file(self):
         ''' Write api tokens to a file '''
@@ -208,14 +211,14 @@ class DaikinSkyport(object):
         start_time is the beginning of the schedule per day.  It is an integer value where every 15 minutes from 00:00 is 1 (each hour = 4)
         end_time is the end of the schedule each day.  Values are same as start_time
         duration is the run time per hour of the schedule. Options are on the full time (0), 5mins (1), 15mins (2), 30mins (3), and 45mins (4) '''
-        body = {"fanCirculateDuration" : duration,
-                "fanCirculateStart" : start_time,
-                "fanCirculateStop" : end_time
-               }
+        body = {"fanCirculateDuration": duration,
+                "fanCirculateStart": start_time,
+                "fanCirculateStop": end_time
+                }
         log_msg_action = "set fan minimum on time."
         return self.make_request(deviceID, body, log_msg_action)
 
-    def set_fan_mode(self, deviceID, fan_mode, cool_temp, heat_temp, hold_type="nextTransition"):
+    def set_fan_mode(self, deviceID, fan_mode):
         ''' Set fan mode. Values: auto (0), schedule (2), on (1) '''
         body = {"fanCirculate": fan_mode}
         log_msg_action = "set fan mode"
@@ -231,10 +234,10 @@ class DaikinSkyport(object):
     def set_hold_temp(self, deviceID, cool_temp, heat_temp,
                       hold_type=NEXT_SCHEDULE):
         ''' Set a hold '''
-        body = {"hspHome" : heat_temp,
-                "cspHome" : cool_temp,
-                "schedOverride" : hold_type '''Need to verify this one'''
-               }
+        body = {"hspHome": heat_temp,
+                "cspHome": cool_temp,
+                "schedOverride": hold_type  # Need to verify this one
+                }
         log_msg_action = "set hold temp"
         return self.make_request(deviceID, body, log_msg_action)
 
@@ -242,18 +245,18 @@ class DaikinSkyport(object):
         ''' Set a climate hold - ie enable/disable schedule. 
         active values are true/false
         hold_type is NEXT_SCHEDULE or PERMANENT_HOLD'''
-        body = {"schedEnabled" : active,
-                "schedOverride" : hold_type
-               }
+        body = {"schedEnabled": active,
+                "schedOverride": hold_type
+                }
         log_msg_action = "set climate hold"
         return self.make_request(deviceID, body, log_msg_action)
 
-''' TBD '''
+    ''' TBD '''
     def delete_vacation(self, index, vacation):
         ''' Delete the vacation with name vacation '''
         body = {"selection": {
-                    "selectionType": "thermostats",
-                    "selectionMatch": self.thermostats[index]['identifier']},
+                "selectionType": "thermostats",
+                "selectionMatch": self.thermostats[index]['identifier']},
                 "functions": [{"type": "deleteVacation", "params": {
                     "name": vacation
                 }}]}
@@ -263,17 +266,17 @@ class DaikinSkyport(object):
 
     def resume_program(self, deviceID, resume_sched=False):
         ''' Resume currently scheduled program '''
-        body = {"schedEnabled" : resume_sched}
+        body = {"schedEnabled": resume_sched}
 
         log_msg_action = "resume program"
         return self.make_request(deviceID, body, log_msg_action)
 
-''' TBD if this is supported '''
+    ''' TBD if this is supported '''
     def send_message(self, index, message="Hello from python-ecobee!"):
         ''' Send a message to the thermostat '''
         body = {"selection": {
-                    "selectionType": "thermostats",
-                    "selectionMatch": self.thermostats[index]['identifier']},
+                "selectionType": "thermostats",
+                "selectionMatch": self.thermostats[index]['identifier']},
                 "functions": [{"type": "sendMessage", "params": {
                     "text": message[0:500]
                 }}]}
@@ -283,8 +286,7 @@ class DaikinSkyport(object):
 
     def set_humidity(self, deviceID, humidity):
         ''' Set humidity level'''
-        body = {"dehumSP" : humidity}
+        body = {"dehumSP": humidity}
 
         log_msg_action = "set humidity level"
         return self.make_request(deviceID, body, log_msg_action)
-
