@@ -114,8 +114,8 @@ def setup(hass, config):
     # Create daikinskyport.conf if it doesn't exist
     if not os.path.isfile(hass.config.path(DAIKINSKYPORT_CONFIG_FILE)):
         jsonconfig = {"EMAIL": config[DOMAIN].get(CONF_EMAIL),
-        "PASSWORD": config[DOMAIN].get(CONF_PASSWORD)
-        }
+                      "PASSWORD": config[DOMAIN].get(CONF_PASSWORD)
+                      }
         save_json(hass.config.path(DAIKINSKYPORT_CONFIG_FILE), jsonconfig)
 
     NETWORK = DaikinSkyportData(hass.config.path(DAIKINSKYPORT_CONFIG_FILE))
