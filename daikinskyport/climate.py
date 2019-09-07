@@ -44,17 +44,19 @@ import homeassistant.helpers.config_validation as cv
 _CONFIGURING = {}
 _LOGGER = logging.getLogger(__name__)
 
-ATTR_FAN_MIN_ON_TIME = "fan_min_on_time"
-ATTR_RESUME_ALL = "resume_all"
+#Hold settings (manual mode)
+HOLD_NEXT_TRANSITION = 0
+HOLD_1HR = 60
+HOLD_2HR = 120
+HOLD_4HR = 240
+HOLD_8HR = 480
 
-DEFAULT_RESUME_ALL = False
-PRESET_TEMPERATURE = "temp"
-PRESET_VACATION = "vacation"
-PRESET_HOLD_NEXT_TRANSITION = "next_transition"
-PRESET_HOLD_INDEFINITE = "indefinite"
-AWAY_MODE = "awayMode"
-PRESET_HOME = "home"
-PRESET_SLEEP = "sleep"
+#Preset values
+PRESET_AWAY = "Away"
+PRESET_SCHEDULE = "Schedule"
+PRESET_MANUAL = "Manual"
+
+FAN_SCHEDULE = "Schedule"
 
 # Order matters, because for reverse mapping we don't want to map HEAT to AUX
 DAIKIN_HVAC_TO_HASS = collections.OrderedDict(
@@ -71,7 +73,15 @@ DAIKIN_FAN_TO_HASS = collections.OrderedDict(
     [
         (0, FAN_AUTO),
         (1, FAN_ON),
-        (2, FAN_AUTO),
+        (2, FAN_SCHEDULE),
+    ]
+)
+
+FAN_TO_DAIKIN_FAN = collections.OrderedDict(
+    [
+        (FAN_AUTO, 0),
+        (FAN_ON, 1),
+        (FAN_SCHEDULE, 2),
     ]
 )
 
@@ -84,33 +94,22 @@ DAIKIN_HVAC_ACTION_TO_HASS = {
     5: CURRENT_HVAC_IDLE,
 }
 
-"""
-PRESET_TO_ECOBEE_HOLD = {
-    PRESET_HOLD_NEXT_TRANSITION: "nextTransition",
-    PRESET_HOLD_INDEFINITE: "indefinite",
+PRESET_TO_DAIKIN_HOLD = {
+    HOLD_NEXT_TRANSITION: 0,
+    HOLD_1HR: 60,
 }
 
-SERVICE_SET_FAN_MIN_ON_TIME = "ecobee_set_fan_min_on_time"
-SERVICE_RESUME_PROGRAM = "ecobee_resume_program"
-"""
-
-SET_FAN_MIN_ON_TIME_SCHEMA = vol.Schema(
-    {
-        vol.Optional(ATTR_ENTITY_ID): cv.entity_ids,
-        vol.Required(ATTR_FAN_MIN_ON_TIME): vol.Coerce(int),
-    }
-)
+SERVICE_RESUME_PROGRAM = "daikin_resume_program"
 
 RESUME_PROGRAM_SCHEMA = vol.Schema(
     {
         vol.Optional(ATTR_ENTITY_ID): cv.entity_ids,
-        vol.Optional(ATTR_RESUME_ALL, default=DEFAULT_RESUME_ALL): cv.boolean,
     }
 )
 
 SUPPORT_FLAGS = (
     SUPPORT_TARGET_TEMPERATURE
-    #    | SUPPORT_PRESET_MODE
+    | SUPPORT_PRESET_MODE
     | SUPPORT_AUX_HEAT
     | SUPPORT_TARGET_TEMPERATURE_RANGE
     | SUPPORT_FAN_MODE
@@ -133,29 +132,9 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     ]
     add_entities(devices)
 
-    '''
-    def fan_min_on_time_set_service(service):
-        """Set the minimum fan on time on the target thermostats."""
-        entity_id = service.data.get(ATTR_ENTITY_ID)
-        fan_min_on_time = service.data[ATTR_FAN_MIN_ON_TIME]
-
-        if entity_id:
-            target_thermostats = [
-                device for device in devices if device.entity_id in entity_id
-            ]
-        else:
-            target_thermostats = devices
-
-        for thermostat in target_thermostats:
-            thermostat.set_fan_min_on_time(str(fan_min_on_time))
-
-            thermostat.schedule_update_ha_state(True)
-    '''
-    '''
     def resume_program_set_service(service):
-        """Resume the program on the target thermostats."""
+        """Resume the schedule on the target thermostats."""
         entity_id = service.data.get(ATTR_ENTITY_ID)
-        resume_all = service.data.get(ATTR_RESUME_ALL)
 
         if entity_id:
             target_thermostats = [
@@ -165,26 +144,40 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
             target_thermostats = devices
 
         for thermostat in target_thermostats:
-            thermostat.resume_program(resume_all)
+            thermostat.resume_program(thermostat["id"])
 
             thermostat.schedule_update_ha_state(True)
-    '''
-    '''
-    hass.services.register(
-        DOMAIN,
-        SERVICE_SET_FAN_MIN_ON_TIME,
-        fan_min_on_time_set_service,
-        schema=SET_FAN_MIN_ON_TIME_SCHEMA,
-    )
-    '''
-    '''
+
     hass.services.register(
         DOMAIN,
         SERVICE_RESUME_PROGRAM,
         resume_program_set_service,
         schema=RESUME_PROGRAM_SCHEMA,
     )
-    '''
+
+    def resume_program_set_service(service):
+        """Resume the schedule on the target thermostats."""
+        entity_id = service.data.get(ATTR_ENTITY_ID)
+
+        if entity_id:
+            target_thermostats = [
+                device for device in devices if device.entity_id in entity_id
+            ]
+        else:
+            target_thermostats = devices
+
+        for thermostat in target_thermostats:
+            thermostat.resume_program(thermostat["id"])
+
+            thermostat.schedule_update_ha_state(True)
+
+    hass.services.register(
+        DOMAIN,
+        SERVICE_RESUME_PROGRAM,
+        resume_program_set_service,
+        schema=RESUME_PROGRAM_SCHEMA,
+    )
+
 
 class Thermostat(ClimateDevice):
     """A thermostat class for Daikin Skyport Thermostats."""
@@ -194,10 +187,8 @@ class Thermostat(ClimateDevice):
         self.data = data
         self.thermostat_index = thermostat_index
         self.thermostat = self.data.daikinskyport.get_thermostat(self.thermostat_index)
-        _LOGGER.error("Thermostat: %s", self.thermostat)
         self._name = self.thermostat["name"]
         self.hold_temp = hold_temp
-        self.vacation = None
 
         self._operation_list = []
         if self.thermostat["ctSystemCapEmergencyHeat"] or (self.thermostat["ctOutdoorNoofHeatStates"] > 0):
@@ -207,13 +198,12 @@ class Thermostat(ClimateDevice):
         if len(self._operation_list) == 2:
             self._operation_list.insert(0, HVAC_MODE_AUTO)
         self._operation_list.append(HVAC_MODE_OFF)
-        '''
-        self._preset_modes = {
-            comfort["climateRef"]: comfort["name"]
-            for comfort in self.thermostat["program"]["climates"]
-        }
-        '''
-        self._fan_modes = [FAN_AUTO, FAN_ON]
+
+        self._preset_modes = {"Schedule",
+                              "Manual",
+                              "Away"
+                              }
+        self._fan_modes = [FAN_AUTO, FAN_ON, FAN_SCHEDULE]
         self.update_without_throttle = False
 
     def update(self):
@@ -238,7 +228,7 @@ class Thermostat(ClimateDevice):
 
     @property
     def name(self):
-        """Return the name of the Ecobee Thermostat."""
+        """Return the name of the Daikin Thermostat."""
         return self.thermostat["name"]
 
     @property
@@ -293,30 +283,15 @@ class Thermostat(ClimateDevice):
         """Return the available fan modes."""
         return self._fan_modes
 
-    '''
     @property
     def preset_mode(self):
         """Return current preset mode."""
-        events = self.thermostat["events"]
-        for event in events:
-            if not event["running"]:
-                continue
-
-            if event["type"] == "hold":
-                if event["holdClimateRef"] in self._preset_modes:
-                    return self._preset_modes[event["holdClimateRef"]]
-
-                # Any hold not based on a climate is a temp hold
-                return PRESET_TEMPERATURE
-            if event["type"].startswith("auto"):
-                # All auto modes are treated as holds
-                return event["type"][4:].lower()
-            if event["type"] == "vacation":
-                self.vacation = event["name"]
-                return PRESET_VACATION
-
-        return self._preset_modes[self.thermostat["program"]["currentClimateRef"]]
-    '''
+        if self.thermostat["geofencingAway"]:
+            return PRESET_AWAY
+        elif self.thermostat["schedEnabled"]:
+            return PRESET_SCHEDULE
+        else:
+            return PRESET_MANUAL
 
     @property
     def hvac_mode(self):
@@ -354,63 +329,30 @@ class Thermostat(ClimateDevice):
         """Return true if aux heater."""
         return False #TBD: Need to figure out how to determine if aux heat is running
 
-    '''
     def set_preset_mode(self, preset_mode):
         """Activate a preset."""
         if preset_mode == self.preset_mode:
             return
 
+        if preset_mode == PRESET_AWAY:
+            self.data.daikinskyport.set_away(self.thermostat_index, True)
+
+        elif preset_mode == PRESET_SCHEDULE:
+            self.data.daikinskyport.set_away(self.thermostat_index, False)
+            self.resume_program()
+
+        elif preset_mode == PRESET_MANUAL:
+            self.data.daikinskyport.set_away(self.thermostat_index, False)
+            self.data.daikinskyport.set_climate_hold(self.thermostat['id'], False)
+        else:
+            return
+
         self.update_without_throttle = True
 
-        # If we are currently in vacation mode, cancel it.
-        if self.preset_mode == PRESET_VACATION:
-            self.data.ecobee.delete_vacation(self.thermostat["id"], self.vacation)
-
-        if preset_mode == PRESET_AWAY:
-            self.data.ecobee.set_climate_hold(
-                self.thermostat_index, "away", "indefinite"
-            )
-
-        elif preset_mode == PRESET_TEMPERATURE:
-            self.set_temp_hold(self.current_temperature)
-
-        elif preset_mode in (PRESET_HOLD_NEXT_TRANSITION, PRESET_HOLD_INDEFINITE):
-            self.data.ecobee.set_climate_hold(
-                self.thermostat_index,
-                PRESET_TO_ECOBEE_HOLD[preset_mode],
-                self.hold_preference(),
-            )
-
-        elif preset_mode == PRESET_NONE:
-            self.data.ecobee.resume_program(self.thermostat_index)
-
-        elif preset_mode in self.preset_modes:
-            climate_ref = None
-
-            for comfort in self.thermostat["program"]["climates"]:
-                if comfort["name"] == preset_mode:
-                    climate_ref = comfort["climateRef"]
-                    break
-
-            if climate_ref is not None:
-                self.data.ecobee.set_climate_hold(
-                    self.thermostat_index, climate_ref, self.hold_preference()
-                )
-            else:
-                _LOGGER.warning("Received unknown preset mode: %s", preset_mode)
-
-        else:
-            self.data.ecobee.set_climate_hold(
-                self.thermostat_index, preset_mode, self.hold_preference()
-            )
-    '''
-
-    '''
     @property
     def preset_modes(self):
         """Return available preset modes."""
-        return list(self._preset_modes.values())
-    '''
+        return list(self._preset_modes)
 
     def set_auto_temp_hold(self, heat_temp, cool_temp):
         """Set temperature hold in auto mode."""
@@ -442,15 +384,16 @@ class Thermostat(ClimateDevice):
 
     def set_fan_mode(self, fan_mode):
         """Set the fan mode.  Valid values are "on" or "auto"."""
-        if fan_mode.lower() != STATE_ON and fan_mode.lower() != HVAC_MODE_AUTO:
+        if fan_mode != FAN_ON and fan_mode != FAN_AUTO and fan_mode != FAN_SCHEDULE:
             error = "Invalid fan_mode value:  Valid values are 'on' or 'auto'"
             _LOGGER.error(error)
             return
 
         self.data.daikinskyport.set_fan_mode(
             self.thermostat["id"],
-            fan_mode,
+            FAN_TO_DAIKIN_FAN[fan_mode]
         )
+        self.update_without_throttle = True
 
         _LOGGER.info("Setting fan mode to: %s", fan_mode)
 
@@ -494,30 +437,16 @@ class Thermostat(ClimateDevice):
         self.data.daikinskyport.set_hvac_mode(self.thermostat["id"], daikin_value)
         self.update_without_throttle = True
 
-    '''
-    def set_fan_min_on_time(self, fan_min_on_time):
-        """Set the minimum fan on time."""
-        self.data.ecobee.set_fan_min_on_time(self.thermostat_index, fan_min_on_time)
-        self.update_without_throttle = True
-    '''
-
-    def resume_program(self, resume_all):
+    def resume_program(self):
         """Resume the thermostat schedule program."""
         self.data.daikinskyport.resume_program(
-            self.thermostat["id"], "true"
+            self.thermostat["id"]
         )
         self.update_without_throttle = True
 
-    '''
     def hold_preference(self):
         """Return user preference setting for hold time."""
-        # Values returned from thermostat are 'useEndTime4hour',
-        # 'useEndTime2hour', 'nextTransition', 'indefinite', 'askMe'
-        default = self.thermostat["settings"]["holdAction"]
-        if default == "nextTransition":
+        default = self.thermostat["schedOverrideDuration"]
+        if isinstance(default, int):
             return default
-        # add further conditions if other hold durations should be
-        # supported; note that this should not include 'indefinite'
-        # as an indefinite away hold is interpreted as away_mode
-        return "nextTransition"
-    '''
+        return HOLD_NEXT_TRANSITION
