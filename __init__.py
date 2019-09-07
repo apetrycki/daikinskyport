@@ -76,9 +76,9 @@ class DaikinSkyport(object):
         url = 'https://api.daikinskyport.com/users/auth/login'
         header = {'Accept': 'application/json',
                   'Content-Type': 'application/json'}
-        data = json.dumps({"email": self.user_email, "password": self.user_password})
+        data = {"email": self.user_email, "password": self.user_password}
         try:
-            request = requests.post(url, headers=header, data=data)
+            request = requests.post(url, headers=header, json=data)
         except RequestException:
             logger.warn("Error connecting to Daikin Skyport.  Possible connectivity outage."
                         "Could not request token.")
@@ -94,15 +94,15 @@ class DaikinSkyport(object):
 
     def refresh_tokens(self):
         ''' Method to refresh API tokens from daikinskyport.com '''
+        logger.error("Refresh Token")
         url = 'https://api.daikinskyport.com/users/auth/token'
         header = {'Accept': 'application/json',
                   'Content-Type': 'application/json'}
-        data = json.dumps({'email': self.user_email,
-                  'refreshToken': self.refresh_token})
-        request = requests.post(url, headers=header, data=data)
+        data = {'email': self.user_email,
+                  'refreshToken': self.refresh_token}
+        request = requests.post(url, headers=header, json=data)
         if request.status_code == requests.codes.ok:
             self.access_token = request.json()['accessToken']
-            self.refresh_token = request.json()['refreshToken']
             self.write_tokens_to_file()
             return True
         else:
@@ -114,6 +114,7 @@ class DaikinSkyport(object):
         header = {'Content-Type': 'application/json;charset=UTF-8',
                   'Authorization': 'Bearer ' + self.access_token}
         params = {}
+        self.thermostats = list()
         try:
             request = requests.get(url, headers=header, params=params)
         except RequestException:
@@ -125,6 +126,7 @@ class DaikinSkyport(object):
             for thermostat in self.thermostatlist:
                 thermostat_info = self.get_thermostat_info(thermostat['id'])
                 thermostat_info['name'] = thermostat['name']
+                thermostat_info['id'] = thermostat['id']
                 self.thermostats.append(thermostat_info)
             return self.thermostats
         else:
@@ -141,9 +143,8 @@ class DaikinSkyport(object):
         url = 'https://api.daikinskyport.com/deviceData/' + deviceid
         header = {'Content-Type': 'application/json;charset=UTF-8',
                   'Authorization': 'Bearer ' + self.access_token}
-        params = {}
         try:
-            request = requests.get(url, headers=header, params=params)
+            request = requests.get(url, headers=header)
         except RequestException:
             logger.warn("Error connecting to Daikin Skyport.  Possible connectivity outage.")
             return None
@@ -161,14 +162,14 @@ class DaikinSkyport(object):
 
     def get_thermostat(self, index):
         ''' Return a single thermostat based on index '''
-        logger.error("Get Thermostat.")
         return self.thermostats[index]
 
-    """
-    def get_remote_sensors(self, index):
-        ''' Return remote sensors based on index '''
-        return self.thermostats[index]['remoteSensors']
-    """
+    def get_sensors(self, index):
+        ''' Return sensors based on index '''
+        sensors = list()
+        sensors.append({"name": self.thermostats[index]['name'] + " Outdoor", "value": self.thermostats[index]['tempOutdoor'], "type": "temperature"})
+        sensors.append({"name": self.thermostats[index]['name'] + " Outdoor", "value": self.thermostats[index]['humOutdoor'], "type": "humidity"})
+        return sensors
 
     def write_tokens_to_file(self):
         ''' Write api tokens to a file '''
@@ -181,7 +182,6 @@ class DaikinSkyport(object):
             config_from_file(self.config_filename, config)
         else:
             self.config = config
-            logger.error("config: %s", self.config)
 
     def update(self):
         ''' Get new thermostat data from daikin skyport '''
@@ -191,12 +191,13 @@ class DaikinSkyport(object):
         url = 'https://api.daikinskyport.com/deviceData/' + deviceID
         header = {'Content-Type': 'application/json;charset=UTF-8',
                   'Authorization': 'Bearer ' + self.access_token}
-        params = {}
+        logger.error("Make Request: Device: %s, Body: %s", deviceID, body)
         try:
-            request = requests.post(url, headers=header, params=params, json=body)
+            request = requests.put(url, headers=header, json=body)
         except RequestException:
             logger.warn("Error connecting to Daikin Skyport.  Possible connectivity outage.")
             return None
+        logger.error("Request Status: %s", request.status_code)
         if request.status_code == requests.codes.ok:
             return request
         elif (request.status_code == 401 and retry_count == 0 and
@@ -244,9 +245,10 @@ class DaikinSkyport(object):
     def set_hold_temp(self, deviceID, cool_temp, heat_temp,
                       hold_type=NEXT_SCHEDULE):
         ''' Set a hold '''
-        body = {"hspHome": heat_temp,
-                "cspHome": cool_temp,
-                "schedOverride": hold_type  # Need to verify this one
+        body = {"hspHome": round(heat_temp, 1),
+                "cspHome": round(cool_temp, 1),
+                "schedEnabled": False,
+                "schedOverrideDuration": hold_type
                 }
         log_msg_action = "set hold temp"
         return self.make_request(deviceID, body, log_msg_action)
@@ -256,47 +258,43 @@ class DaikinSkyport(object):
         active values are true/false
         hold_type is NEXT_SCHEDULE or PERMANENT_HOLD'''
         body = {"schedEnabled": active,
-                "schedOverride": hold_type
+                "schedOverrideDuration": hold_type
                 }
         log_msg_action = "set climate hold"
         return self.make_request(deviceID, body, log_msg_action)
 
-    ''' TBD '''
-    def delete_vacation(self, index, vacation):
-        ''' Delete the vacation with name vacation '''
-        body = {"selection": {
-                "selectionType": "thermostats",
-                "selectionMatch": self.thermostats[index]['identifier']},
-                "functions": [{"type": "deleteVacation", "params": {
-                    "name": vacation
-                }}]}
+    def set_away(self, index, mode, heat_temp=None, cool_temp=None):
+        ''' Enable/Disable the away setting and optionally set the away temps '''
+        if heat_temp is None:
+            heat_temp = round(self.thermostats[index]["hspAway"], 1)
+        if cool_temp is None:
+            cool_temp = round(self.thermostats[index]["cspAway"], 1)
+        body = {"geofencingAway": mode,
+                "hspAway": heat_temp,
+                "cspAway": cool_temp
+                }
 
-        log_msg_action = "delete a vacation"
-        return self.make_request(body, log_msg_action)
+        log_msg_action = "set away mode"
+        return self.make_request(self.thermostats[index]['id'], body, log_msg_action)
 
-    def resume_program(self, deviceID, resume_sched=False):
+    def resume_program(self, deviceID):
         ''' Resume currently scheduled program '''
-        body = {"schedEnabled": resume_sched}
+        body = {"schedEnabled": True,
+                "geofencingAway": False
+                }
 
         log_msg_action = "resume program"
         return self.make_request(deviceID, body, log_msg_action)
 
-    ''' TBD if this is supported '''
-    def send_message(self, index, message="Hello from python-ecobee!"):
-        ''' Send a message to the thermostat '''
-        body = {"selection": {
-                "selectionType": "thermostats",
-                "selectionMatch": self.thermostats[index]['identifier']},
-                "functions": [{"type": "sendMessage", "params": {
-                    "text": message[0:500]
-                }}]}
-
-        log_msg_action = "send message"
-        return self.make_request(body, log_msg_action)
-
-    def set_humidity(self, deviceID, humidity):
+    def set_humidity(self, deviceID, humidity_low=None, humidity_high=None):
         ''' Set humidity level'''
-        body = {"dehumSP": humidity}
+        if humidity_low is None:
+            humidity_low = self.thermostats[deviceID]["humSP"]
+        if humidity_high is None:
+            humidity_high = self.thermostats[deviceID]["dehumSP"]
+        body = {"dehumSP": humidity_high,
+                "humSP": humidity_low
+                }
 
         log_msg_action = "set humidity level"
         return self.make_request(deviceID, body, log_msg_action)
