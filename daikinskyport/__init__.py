@@ -23,7 +23,7 @@ DOMAIN = "daikinskyport"
 
 DAIKINSKYPORT_CONFIG_FILE = "daikinskyport.conf"
 
-MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=180)
+MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=10)
 
 NETWORK = None
 
@@ -79,7 +79,7 @@ def setup_daikinskyport(hass, network, config):
     hold_temp = config[DOMAIN].get(CONF_HOLD_TEMP)
 
     discovery.load_platform(hass, "climate", DOMAIN, {"hold_temp": hold_temp}, config)
-#    discovery.load_platform(hass, "sensor", DOMAIN, {}, config)
+    discovery.load_platform(hass, "sensor", DOMAIN, {}, config)
 #    discovery.load_platform(hass, "binary_sensor", DOMAIN, {}, config)
 #    discovery.load_platform(hass, "weather", DOMAIN, {}, config)
 
