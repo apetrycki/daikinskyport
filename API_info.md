@@ -121,6 +121,7 @@ To set configuration:
 curl --location --request PUT "https://api.daikinskyport.com/deviceData/<device UUID>" \
 --header "Accept: application/json" \
 --header "Content-Type: application/json" \
+--header "Authorization: Bearer <access token>"
 --data '{"geofencingAway": "False", "schedEnabled": "False","schedOverride":0,"cspHome":24.4}'
 ```
 
@@ -162,6 +163,7 @@ Sensors:
 "hspActive": current heating set point, in C
 "cspSched": current cooling set point for the schedule, in C
 "hspSched": current heating set point for the schedule, in C
+"geofencingAway": current status of the geofencing, true/false
 "fanCirculateActive": current status of fan circulation, true/false
 "oneCleanFanActive": current status of One Clean Fan, true/false
 “nightModeActive”: current status of night mode, True/False
@@ -203,7 +205,7 @@ Schedule:
 "sched[DoW]Part[n]csp": cooling set point, temperature in C, one decimal place
 "sched[DoW]Part[n]Enabled": enable or disable the schedule block, true/false
 "sched[DoW]Part[n]hsp": heating set point, temperature in C, one decimal place
-"schedOverrideDuration": how long the manual set point should last, time? (TBD)
+"schedOverrideDuration": how long the manual set point should last, in minutes
 "schedEnabled": set if the schedule is enabled or manual set point, true/false
 ```
 [DoW]: Day of week - Mon, Tue, Wed, Thu, Fri, Sat, Sun
