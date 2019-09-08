@@ -189,6 +189,16 @@ class Thermostat(ClimateDevice):
         self.thermostat = self.data.daikinskyport.get_thermostat(self.thermostat_index)
         self._name = self.thermostat["name"]
         self.hold_temp = hold_temp
+        self._cool_setpoint = self.thermostat["cspActive"]
+        self._heat_setpoint = self.thermostat["hspActive"]
+        self._hvac_mode = DAIKIN_HVAC_TO_HASS[self.thermostat["mode"]]
+        self._fan_mode = DAIKIN_FAN_TO_HASS[self.thermostat["fanCirculate"]]
+        if self.thermostat["geofencingAway"]:
+            self._preset_mode = PRESET_AWAY
+        elif self.thermostat["schedEnabled"]:
+            self._preset_mode = PRESET_SCHEDULE
+        else:
+            self._preset_mode = PRESET_MANUAL
 
         self._operation_list = []
         if self.thermostat["ctSystemCapEmergencyHeat"] or (self.thermostat["ctOutdoorNoofHeatStates"] > 0):
@@ -245,14 +255,14 @@ class Thermostat(ClimateDevice):
     def target_temperature_low(self):
         """Return the lower bound temperature we try to reach."""
         if self.hvac_mode == HVAC_MODE_AUTO:
-            return self.thermostat["hspActive"]
+            return self._heat_setpoint
         return None
 
     @property
     def target_temperature_high(self):
         """Return the upper bound temperature we try to reach."""
         if self.hvac_mode == HVAC_MODE_AUTO:
-            return self.thermostat["cspActive"]
+            return self._cool_setpoint
         return None
 
     @property
@@ -261,9 +271,9 @@ class Thermostat(ClimateDevice):
         if self.hvac_mode == HVAC_MODE_AUTO:
             return None
         if self.hvac_mode == HVAC_MODE_HEAT:
-            return self.thermostat["hspActive"]
+            return self._heat_setpoint
         if self.hvac_mode == HVAC_MODE_COOL:
-            return self.thermostat["cspActive"]
+            return self._cool_setpoint
         return None
 
     @property
@@ -276,7 +286,7 @@ class Thermostat(ClimateDevice):
     @property
     def fan_mode(self):
         """Return the fan setting."""
-        return DAIKIN_FAN_TO_HASS[self.thermostat["fanCirculate"]] #0=off, 1=always on, 2=schedule
+        return self._fan_mode
 
     @property
     def fan_modes(self):
@@ -286,17 +296,12 @@ class Thermostat(ClimateDevice):
     @property
     def preset_mode(self):
         """Return current preset mode."""
-        if self.thermostat["geofencingAway"]:
-            return PRESET_AWAY
-        elif self.thermostat["schedEnabled"]:
-            return PRESET_SCHEDULE
-        else:
-            return PRESET_MANUAL
+        return self._preset_mode
 
     @property
     def hvac_mode(self):
         """Return current operation."""
-        return DAIKIN_HVAC_TO_HASS[self.thermostat["mode"]]
+        return self._hvac_mode
 
     @property
     def hvac_modes(self):
@@ -321,7 +326,9 @@ class Thermostat(ClimateDevice):
             "fan": self.fan,
             "schedule_mode": self.thermostat["schedEnabled"],
             "fan_cfm": self.thermostat["ctAHCurrentIndoorAirflow"],
-            "fan_demand": self.thermostat["ctAHFanCurrentDemandStatus"],
+            "fan_demand": round(self.thermostat["ctAHFanCurrentDemandStatus"] / 255 * 100, 1),
+            "cooling_demand": round(self.thermostat["ctOutdoorCoolRequestedDemand"] / 255 * 100, 1),
+            "heating_demand": round(self.thermostat["ctAHHeatCurrentDemandStatus"] / 255 * 100, 1)
         }
 
     @property
@@ -346,6 +353,8 @@ class Thermostat(ClimateDevice):
             self.data.daikinskyport.set_climate_hold(self.thermostat['id'], False)
         else:
             return
+        
+        self._preset_mode = preset_mode
 
         self.update_without_throttle = True
 
@@ -372,6 +381,10 @@ class Thermostat(ClimateDevice):
             heat_temp_setpoint,
             self.hold_preference(),
         )
+        
+        self._cool_setpoint = cool_temp_setpoint
+        self._heat_setpoint = heat_temp_setpoint
+        
         _LOGGER.debug(
             "Setting Daikin Skyport hold_temp to: heat=%s, is=%s, " "cool=%s, is=%s",
             heat_temp,
@@ -393,6 +406,8 @@ class Thermostat(ClimateDevice):
             self.thermostat["id"],
             FAN_TO_DAIKIN_FAN[fan_mode]
         )
+        
+        self._fan_mode = fan_mode
         self.update_without_throttle = True
 
         _LOGGER.info("Setting fan mode to: %s", fan_mode)
@@ -406,6 +421,9 @@ class Thermostat(ClimateDevice):
             cool_temp = temp
             heat_temp = self.thermostat["hspHome"]
         self.set_auto_temp_hold(heat_temp, cool_temp)
+
+        self._cool_setpoint = cool_temp
+        self._heat_setpoint = heat_temp
 
     def set_temperature(self, **kwargs):
         """Set new target temperature."""
@@ -422,6 +440,10 @@ class Thermostat(ClimateDevice):
         else:
             _LOGGER.error("Missing valid arguments for set_temperature in %s", kwargs)
 
+        self._cool_setpoint = high_temp
+        self._heat_setpoint = low_temp
+
+
     def set_humidity(self, humidity):
         """Set the humidity level."""
         self.data.daikinskyport.set_humidity(self.thermostat["id"], humidity)
@@ -435,6 +457,7 @@ class Thermostat(ClimateDevice):
             _LOGGER.error("Invalid mode for set_hvac_mode: %s", hvac_mode)
             return
         self.data.daikinskyport.set_hvac_mode(self.thermostat["id"], daikin_value)
+        self._hvac_mode = hvac_mode
         self.update_without_throttle = True
 
     def resume_program(self):
