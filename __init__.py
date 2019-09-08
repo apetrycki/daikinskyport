@@ -113,10 +113,8 @@ class DaikinSkyport(object):
         url = 'https://api.daikinskyport.com/devices'
         header = {'Content-Type': 'application/json;charset=UTF-8',
                   'Authorization': 'Bearer ' + self.access_token}
-        params = {}
-        self.thermostats = list()
         try:
-            request = requests.get(url, headers=header, params=params)
+            request = requests.get(url, headers=header)
         except RequestException:
             logger.warn("Error connecting to Daikin Skyport.  Possible connectivity outage.")
             return None
@@ -124,10 +122,16 @@ class DaikinSkyport(object):
             self.authenticated = True
             self.thermostatlist = request.json()
             for thermostat in self.thermostatlist:
+                overwrite = False
                 thermostat_info = self.get_thermostat_info(thermostat['id'])
                 thermostat_info['name'] = thermostat['name']
                 thermostat_info['id'] = thermostat['id']
-                self.thermostats.append(thermostat_info)
+                for index in range(len(self.thermostats)):
+                    if thermostat['id'] == self.thermostats[index]['id']:
+                        overwrite = True
+                        self.thermostats[index] = thermostat_info
+                if not overwrite:
+                    self.thermostats.append(thermostat_info)
             return self.thermostats
         else:
             self.authenticated = False
@@ -169,6 +173,15 @@ class DaikinSkyport(object):
         sensors = list()
         sensors.append({"name": self.thermostats[index]['name'] + " Outdoor", "value": self.thermostats[index]['tempOutdoor'], "type": "temperature"})
         sensors.append({"name": self.thermostats[index]['name'] + " Outdoor", "value": self.thermostats[index]['humOutdoor'], "type": "humidity"})
+        if self.thermostats[index]['aqOutdoorAvailable']:
+            sensors.append({"name": self.thermostats[index]['name'] + " Outdoor", "value": self.thermostats[index]['aqOutdoorParticles'], "type": "particle"})
+            sensors.append({"name": self.thermostats[index]['name'] + " Outdoor", "value": self.thermostats[index]['aqOutdoorValue'], "type": "score"})
+            sensors.append({"name": self.thermostats[index]['name'] + " Outdoor", "value": self.thermostats[index]['aqOutdoorOzone'], "type": "ozone"})
+        if self.thermostats[index]['aqIndoorAvailable']:
+            sensors.append({"name": self.thermostats[index]['name'] + " Indoor", "value": self.thermostats[index]['aqIndoorParticlesValue'], "type": "particle"})
+            sensors.append({"name": self.thermostats[index]['name'] + " Indoor", "value": self.thermostats[index]['aqIndoorValue'], "type": "score"})
+            sensors.append({"name": self.thermostats[index]['name'] + " Indoor", "value": self.thermostats[index]['aqIndoorVOCValue'], "type": "VOC"})
+            
         return sensors
 
     def write_tokens_to_file(self):
