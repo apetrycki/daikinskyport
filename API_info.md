@@ -178,6 +178,13 @@ Sensors:
 “ctAHFanCurrentDemandStatus”: looks like a %, current fan demand
 “ctAHFanRequestedDemand”: looks like a %, the requested fan demand by thermostat
 “ctAHCurrentIndoorAirflow”: maybe CFM?, current airflow
+"aq[In/Out]doorAvailable": true if sensor is available (outdoor is internet info)
+"aq[In/Out]doorLevel": assuming this is an enum, 1=acceptable, others TBD
+"aqOutdoorOzone": ozone concentration in ppb
+"aq[In/Out]doorParticles": particle concentration in ug/m3
+"aq[In/Out]doorValue": AQI score
+"aqIndoorParticlesLevel": TBD
+"aqIndoorVOCLevel": TBD
 ```
 [n]: Forecast day 1 through 5
 
