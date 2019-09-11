@@ -225,6 +225,16 @@ class Thermostat(ClimateDevice):
             self.data.update()
 
         self.thermostat = self.data.daikinskyport.get_thermostat(self.thermostat_index)
+        self._cool_setpoint = self.thermostat["cspActive"]
+        self._heat_setpoint = self.thermostat["hspActive"]
+        self._hvac_mode = DAIKIN_HVAC_TO_HASS[self.thermostat["mode"]]
+        self._fan_mode = DAIKIN_FAN_TO_HASS[self.thermostat["fanCirculate"]]
+        if self.thermostat["geofencingAway"]:
+            self._preset_mode = PRESET_AWAY
+        elif self.thermostat["schedEnabled"]:
+            self._preset_mode = PRESET_SCHEDULE
+        else:
+            self._preset_mode = PRESET_MANUAL
 
     @property
     def available(self):
@@ -328,7 +338,9 @@ class Thermostat(ClimateDevice):
             "fan_cfm": self.thermostat["ctAHCurrentIndoorAirflow"],
             "fan_demand": round(self.thermostat["ctAHFanCurrentDemandStatus"] / 255 * 100, 1),
             "cooling_demand": round(self.thermostat["ctOutdoorCoolRequestedDemand"] / 255 * 100, 1),
-            "heating_demand": round(self.thermostat["ctAHHeatCurrentDemandStatus"] / 255 * 100, 1)
+            "heating_demand": round(self.thermostat["ctAHHeatCurrentDemandStatus"] / 255 * 100, 1),
+            "dehumidification_demand": round(self.thermostat["ctOutdoorDeHumidificationRequestedDemand"] / 255 * 100, 1),
+            "thermostat_version": self.thermostat["statFirmware"],            
         }
 
     @property
