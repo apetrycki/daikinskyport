@@ -175,8 +175,9 @@ Sensors:
 “weatherDay[n]Icon”: tstorms, partlycloudy, (these are all I have right now)
 “weatherDay[n]Cond”: text description of conditions
 “weatherDay[n]Hum”: humidity forecast
-“ctAHFanCurrentDemandStatus”: looks like a %, current fan demand
+“ctAHFanCurrentDemandStatus”: looks like a % (x/255*100), current fan demand
 “ctAHFanRequestedDemand”: looks like a %, the requested fan demand by thermostat
+"ctOutdoorDeHumidificationRequestedDemand": looks like a %, requested dehumidification.  when this starts, cooling demand stops
 “ctAHCurrentIndoorAirflow”: maybe CFM?, current airflow
 "aq[In/Out]doorAvailable": true if sensor is available (outdoor is internet info)
 "aq[In/Out]doorLevel": assuming this is an enum, 1=acceptable, others TBD
