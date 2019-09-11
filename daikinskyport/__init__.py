@@ -81,7 +81,7 @@ def setup_daikinskyport(hass, network, config):
     discovery.load_platform(hass, "climate", DOMAIN, {"hold_temp": hold_temp}, config)
     discovery.load_platform(hass, "sensor", DOMAIN, {}, config)
 #    discovery.load_platform(hass, "binary_sensor", DOMAIN, {}, config)
-#    discovery.load_platform(hass, "weather", DOMAIN, {}, config)
+    discovery.load_platform(hass, "weather", DOMAIN, {}, config)
 
 
 class DaikinSkyportData:
