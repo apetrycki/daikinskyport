@@ -195,6 +195,8 @@ Fan:
 ```
 “fanCirculate”: 0=off, 1=always on, 2=schedule, manual fan control
 “fanCirculateDuration”: 0=entire schedule, 1=5mins, 2=15mins, 3=30mins, 4=45mins runs the fan for this amount of time every hour in schedule
+"fanCirculateStart": start time of fan schedule (see time note)
+"fanCirculateStop": end time of fan schedule (see time note)
 ```
 
 OneClean (Air Quality) settings:
