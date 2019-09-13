@@ -129,7 +129,7 @@ Set a temperature hold:
 ```
 "geofencingAway": Set whether geofencing is in away mode, true/false
 "schedEnabled": Set if thermostat goes off schedule or manual set point, true=schedule, false=set point
-"schedOverride": integer, unknown (TBD)
+"schedOverride": integer, when set to 1 while schedEnabled=true, sets a temporary hold
 "cspHome": cooling set point, temperature in C, one decimal place
 "hspHome": heating set point, temperature in C, one decimal place
 ```
