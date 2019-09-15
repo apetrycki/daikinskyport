@@ -53,8 +53,12 @@ class DaikinSkyport(object):
             config = config_from_file(config_filename)
         else:
             self.file_based_config = False
-        self.user_email = config['EMAIL']
-        self.user_password = config['PASSWORD']
+        if 'EMAIL' in config:
+            self.user_email = config['EMAIL']
+        else:
+            logger.error("Email missing from config.")
+        if 'PASSWORD' in config: # PASSWORD is only needed during first login
+            self.user_password = config['PASSWORD']
         self.config_filename = config_filename
 
         if 'ACCESS_TOKEN' in config:
@@ -86,7 +90,10 @@ class DaikinSkyport(object):
         if request.status_code == requests.codes.ok:
             self.access_token = request.json()['accessToken']
             self.refresh_token = request.json()['refreshToken']
-            self.write_tokens_to_file()
+            if self.refresh_token is None:
+                logger.error("Auth did not return a refresh token.")
+            else:
+                self.write_tokens_to_file()
         else:
             logger.warn('Error while requesting tokens from daikinskyport.com.'
                         ' Status code: ' + str(request.status_code))
@@ -94,7 +101,6 @@ class DaikinSkyport(object):
 
     def refresh_tokens(self):
         ''' Method to refresh API tokens from daikinskyport.com '''
-        logger.error("Refresh Token")
         url = 'https://api.daikinskyport.com/users/auth/token'
         header = {'Accept': 'application/json',
                   'Content-Type': 'application/json'}
@@ -190,7 +196,6 @@ class DaikinSkyport(object):
         config['ACCESS_TOKEN'] = self.access_token
         config['REFRESH_TOKEN'] = self.refresh_token
         config['EMAIL'] = self.user_email
-        config['PASSWORD'] = self.user_password
         if self.file_based_config:
             config_from_file(self.config_filename, config)
         else:
@@ -200,7 +205,8 @@ class DaikinSkyport(object):
         ''' Get new thermostat data from daikin skyport '''
         self.get_thermostats()
 
-    def make_request(self, deviceID, body, log_msg_action, *, retry_count=0):
+    def make_request(self, index, body, log_msg_action, *, retry_count=0):
+        deviceID = self.thermostats[index]['id']
         url = 'https://api.daikinskyport.com/deviceData/' + deviceID
         header = {'Content-Type': 'application/json;charset=UTF-8',
                   'Authorization': 'Bearer ' + self.access_token}
@@ -210,7 +216,6 @@ class DaikinSkyport(object):
         except RequestException:
             logger.warn("Error connecting to Daikin Skyport.  Possible connectivity outage.")
             return None
-        logger.error("Request Status: %s", request.status_code)
         if request.status_code == requests.codes.ok:
             return request
         elif (request.status_code == 401 and retry_count == 0 and
@@ -219,16 +224,16 @@ class DaikinSkyport(object):
                 return self.make_request(body, deviceID, log_msg_action,
                                          retry_count=retry_count + 1)
         else:
-            logger.info(
+            logger.warn(
                 "Error fetching data from Daikin Skyport while attempting to %s: %s",
                 log_msg_action, request.json())
             return None
 
-    def set_hvac_mode(self, deviceID, hvac_mode):
+    def set_hvac_mode(self, index, hvac_mode):
         ''' possible hvac modes are auto (3), auxHeatOnly (4), cool (2), heat (1), off (0) '''
         body = {"mode": hvac_mode}
         log_msg_action = "set HVAC mode"
-        return self.make_request(deviceID, body, log_msg_action)
+        return self.make_request(index, body, log_msg_action)
 
     def set_fan_schedule(self, deviceID, start_time, end_time, duration):
         ''' Schedule to run the fan.  
@@ -240,41 +245,49 @@ class DaikinSkyport(object):
                 "fanCirculateStop": end_time
                 }
         log_msg_action = "set fan minimum on time."
-        return self.make_request(deviceID, body, log_msg_action)
+        return self.make_request(index, body, log_msg_action)
 
-    def set_fan_mode(self, deviceID, fan_mode):
+    def set_fan_mode(self, index, fan_mode):
         ''' Set fan mode. Values: auto (0), schedule (2), on (1) '''
         body = {"fanCirculate": fan_mode}
         log_msg_action = "set fan mode"
-        return self.make_request(deviceID, body, log_msg_action)
+        return self.make_request(index, body, log_msg_action)
 
-    def set_fan_clean(self, deviceID, active):
+    def set_fan_clean(self, index, active):
         ''' Enable/disable fan clean mode.  This runs the fan at high speed to clear out the air.
         active values are true/false'''
         body = {"oneCleanFanActive": active}
         log_msg_action = "set fan clean mode"
-        return self.make_request(deviceID, body, log_msg_action)
+        return self.make_request(index, body, log_msg_action)
 
-    def set_hold_temp(self, deviceID, cool_temp, heat_temp,
-                      hold_type=NEXT_SCHEDULE):
-        ''' Set a hold '''
+    def set_temp_hold(self, index, cool_temp=None, heat_temp=None,
+                      hold_duration=None):
+        ''' Set a temporary hold '''
+        if hold_duration is None:
+            hold_duration = self.thermostats[index]["schedOverrideDuration"]
         body = {"hspHome": round(heat_temp, 1),
                 "cspHome": round(cool_temp, 1),
-                "schedEnabled": False,
-                "schedOverrideDuration": hold_type
+                "schedOverride": 1,
+                "schedOverrideDuration": hold_duration
                 }
         log_msg_action = "set hold temp"
-        return self.make_request(deviceID, body, log_msg_action)
+        return self.make_request(index, body, log_msg_action)
 
-    def set_climate_hold(self, deviceID, active, hold_type=NEXT_SCHEDULE):
+    def set_permanent_hold(self, index, active, cool_temp=None, heat_temp=None):
         ''' Set a climate hold - ie enable/disable schedule. 
         active values are true/false
-        hold_type is NEXT_SCHEDULE or PERMANENT_HOLD'''
-        body = {"schedEnabled": active,
-                "schedOverrideDuration": hold_type
+        hold_duration is NEXT_SCHEDULE'''
+        if cool_temp is None:
+            cool_temp = self.thermostats[index]["cspHome"]
+        if heat_temp is None:
+            heat_temp = self.thermostats[index]["hspHome"]
+        body = {"hspHome": round(heat_temp, 1),
+                "cspHome": round(cool_temp, 1),
+                "schedEnabled": active,
+                "schedOverrideDuration": hold_duration
                 }
-        log_msg_action = "set climate hold"
-        return self.make_request(deviceID, body, log_msg_action)
+        log_msg_action = "set permanent hold"
+        return self.make_request(index, body, log_msg_action)
 
     def set_away(self, index, mode, heat_temp=None, cool_temp=None):
         ''' Enable/Disable the away setting and optionally set the away temps '''
@@ -288,26 +301,37 @@ class DaikinSkyport(object):
                 }
 
         log_msg_action = "set away mode"
-        return self.make_request(self.thermostats[index]['id'], body, log_msg_action)
+        return self.make_request(index, body, log_msg_action)
 
-    def resume_program(self, deviceID):
+    def resume_program(self, index):
         ''' Resume currently scheduled program '''
         body = {"schedEnabled": True,
+                "schedOverride": 0,
                 "geofencingAway": False
                 }
 
         log_msg_action = "resume program"
-        return self.make_request(deviceID, body, log_msg_action)
+        return self.make_request(index, body, log_msg_action)
 
-    def set_humidity(self, deviceID, humidity_low=None, humidity_high=None):
+    def set_fan_schedule(self, index, start, stop, interval):
+        ''' Set the fan schedule parameters '''
+        body = {"fanCirculateStart": start,
+                "fanCirculateStop": stop,
+                "fanCirculateDuration": interval
+                }
+
+        log_msg_action = "set fan schedule"
+        return self.make_request(index, body, log_msg_action)
+
+    def set_humidity(self, index, humidity_low=None, humidity_high=None):
         ''' Set humidity level'''
         if humidity_low is None:
-            humidity_low = self.thermostats[deviceID]["humSP"]
+            humidity_low = self.thermostats[index]["humSP"]
         if humidity_high is None:
-            humidity_high = self.thermostats[deviceID]["dehumSP"]
+            humidity_high = self.thermostats[index]["dehumSP"]
         body = {"dehumSP": humidity_high,
                 "humSP": humidity_low
                 }
 
         log_msg_action = "set humidity level"
-        return self.make_request(deviceID, body, log_msg_action)
+        return self.make_request(index, body, log_msg_action)
