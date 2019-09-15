@@ -1,6 +1,7 @@
 """Support for Daikin Skyport Thermostats."""
 import collections
 import logging
+from time import sleep
 from typing import Optional
 
 import voluptuous as vol
@@ -55,8 +56,13 @@ HOLD_8HR = 480
 PRESET_AWAY = "Away"
 PRESET_SCHEDULE = "Schedule"
 PRESET_MANUAL = "Manual"
-
+PRESET_TEMP_HOLD = "Temp Hold"
 FAN_SCHEDULE = "Schedule"
+
+#Fan Schedule values
+ATTR_FAN_START_TIME = "start_time"
+ATTR_FAN_STOP_TIME = "stop_time"
+ATTR_FAN_INTERVAL = "interval"
 
 # Order matters, because for reverse mapping we don't want to map HEAT to AUX
 DAIKIN_HVAC_TO_HASS = collections.OrderedDict(
@@ -97,13 +103,26 @@ DAIKIN_HVAC_ACTION_TO_HASS = {
 PRESET_TO_DAIKIN_HOLD = {
     HOLD_NEXT_TRANSITION: 0,
     HOLD_1HR: 60,
+    HOLD_2HR: 120,
+    HOLD_4HR: 240,
+    HOLD_8HR: 480
 }
 
 SERVICE_RESUME_PROGRAM = "daikin_resume_program"
+SERVICE_SET_FAN_SCHEDULE = "daikin_set_fan_schedule"
 
 RESUME_PROGRAM_SCHEMA = vol.Schema(
     {
+        vol.Optional(ATTR_ENTITY_ID): cv.entity_ids
+    }
+)
+
+FAN_SCHEDULE_SCHEMA = vol.Schema(
+    {
         vol.Optional(ATTR_ENTITY_ID): cv.entity_ids,
+        vol.Optional(ATTR_FAN_START_TIME): cv.string,
+        vol.Optional(ATTR_FAN_STOP_TIME): cv.string,
+        vol.Optional(ATTR_FAN_INTERVAL): cv.positive_int
     }
 )
 
@@ -121,13 +140,9 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     if discovery_info is None:
         return
     data = daikinskyport.NETWORK
-    hold_temp = discovery_info["hold_temp"]
-    _LOGGER.info(
-        "Loading daikinskyport thermostat component with hold_temp set to %s", hold_temp
-        )
     
     devices = [
-        Thermostat(data, index, hold_temp)
+        Thermostat(data, index)
         for index in range(len(data.daikinskyport.thermostats))
     ]
     add_entities(devices)
@@ -148,16 +163,13 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 
             thermostat.schedule_update_ha_state(True)
 
-    hass.services.register(
-        DOMAIN,
-        SERVICE_RESUME_PROGRAM,
-        resume_program_set_service,
-        schema=RESUME_PROGRAM_SCHEMA,
-    )
-
-    def resume_program_set_service(service):
-        """Resume the schedule on the target thermostats."""
+    def set_fan_schedule_service(service):
+        """Set the fan schedule on the target thermostats."""
         entity_id = service.data.get(ATTR_ENTITY_ID)
+        
+        start = service.data.get(ATTR_FAN_START_TIME)
+        stop = service.data.get(ATTR_FAN_STOP_TIME)
+        interval = service.data.get(ATTR_FAN_INTERVAL)
 
         if entity_id:
             target_thermostats = [
@@ -167,7 +179,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
             target_thermostats = devices
 
         for thermostat in target_thermostats:
-            thermostat.resume_program(thermostat["id"])
+            thermostat.set_fan_schedule(start, stop, interval)
 
             thermostat.schedule_update_ha_state(True)
 
@@ -178,23 +190,30 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
         schema=RESUME_PROGRAM_SCHEMA,
     )
 
+    hass.services.register(
+        DOMAIN,
+        SERVICE_SET_FAN_SCHEDULE,
+        set_fan_schedule_service,
+        schema=FAN_SCHEDULE_SCHEMA,
+    )
 
 class Thermostat(ClimateDevice):
     """A thermostat class for Daikin Skyport Thermostats."""
 
-    def __init__(self, data, thermostat_index, hold_temp):
+    def __init__(self, data, thermostat_index):
         """Initialize the thermostat."""
         self.data = data
         self.thermostat_index = thermostat_index
         self.thermostat = self.data.daikinskyport.get_thermostat(self.thermostat_index)
         self._name = self.thermostat["name"]
-        self.hold_temp = hold_temp
         self._cool_setpoint = self.thermostat["cspActive"]
         self._heat_setpoint = self.thermostat["hspActive"]
         self._hvac_mode = DAIKIN_HVAC_TO_HASS[self.thermostat["mode"]]
         self._fan_mode = DAIKIN_FAN_TO_HASS[self.thermostat["fanCirculate"]]
         if self.thermostat["geofencingAway"]:
             self._preset_mode = PRESET_AWAY
+        elif self.thermostat["schedOverride"] == 1:
+            self._preset_mode = PRESET_TEMP_HOLD
         elif self.thermostat["schedEnabled"]:
             self._preset_mode = PRESET_SCHEDULE
         else:
@@ -209,9 +228,10 @@ class Thermostat(ClimateDevice):
             self._operation_list.insert(0, HVAC_MODE_AUTO)
         self._operation_list.append(HVAC_MODE_OFF)
 
-        self._preset_modes = {"Schedule",
-                              "Manual",
-                              "Away"
+        self._preset_modes = {PRESET_SCHEDULE,
+                              PRESET_MANUAL,
+                              PRESET_TEMP_HOLD,
+                              PRESET_AWAY
                               }
         self._fan_modes = [FAN_AUTO, FAN_ON, FAN_SCHEDULE]
         self.update_without_throttle = False
@@ -219,6 +239,7 @@ class Thermostat(ClimateDevice):
     def update(self):
         """Get the latest state from the thermostat."""
         if self.update_without_throttle:
+            sleep(3)
             self.data.update(no_throttle=True)
             self.update_without_throttle = False
         else:
@@ -231,6 +252,8 @@ class Thermostat(ClimateDevice):
         self._fan_mode = DAIKIN_FAN_TO_HASS[self.thermostat["fanCirculate"]]
         if self.thermostat["geofencingAway"]:
             self._preset_mode = PRESET_AWAY
+        elif self.thermostat["schedOverride"] == 1:
+            self._preset_mode = PRESET_TEMP_HOLD
         elif self.thermostat["schedEnabled"]:
             self._preset_mode = PRESET_SCHEDULE
         else:
@@ -336,10 +359,11 @@ class Thermostat(ClimateDevice):
             "fan": self.fan,
             "schedule_mode": self.thermostat["schedEnabled"],
             "fan_cfm": self.thermostat["ctAHCurrentIndoorAirflow"],
-            "fan_demand": round(self.thermostat["ctAHFanCurrentDemandStatus"] / 255 * 100, 1),
-            "cooling_demand": round(self.thermostat["ctOutdoorCoolRequestedDemand"] / 255 * 100, 1),
-            "heating_demand": round(self.thermostat["ctAHHeatCurrentDemandStatus"] / 255 * 100, 1),
-            "dehumidification_demand": round(self.thermostat["ctOutdoorDeHumidificationRequestedDemand"] / 255 * 100, 1),
+            "fan_demand": round(self.thermostat["ctAHFanCurrentDemandStatus"] / 2, 1),
+            "cooling_demand": round(self.thermostat["ctOutdoorCoolRequestedDemand"] / 2, 1),
+            "heating_demand": round(self.thermostat["ctAHHeatCurrentDemandStatus"] / 2, 1),
+            "dehumidification_demand": round(self.thermostat["ctOutdoorDeHumidificationRequestedDemand"] / 2, 1),
+            "humidification_demand": round(self.thermostat["ctAHHumidificationRequestedDemand"] / 2, 1),
             "thermostat_version": self.thermostat["statFirmware"],            
         }
 
@@ -362,7 +386,11 @@ class Thermostat(ClimateDevice):
 
         elif preset_mode == PRESET_MANUAL:
             self.data.daikinskyport.set_away(self.thermostat_index, False)
-            self.data.daikinskyport.set_climate_hold(self.thermostat['id'], False)
+            self.data.daikinskyport.set_permanent_hold(self.thermostat_index, False)
+            
+        elif preset_mode == PRESET_TEMP_HOLD:
+            self.data.daikinskyport.set_away(self.thermostat_index, False)
+            self.data.daikinskyport.set_temp_hold(self.thermostat_index)
         else:
             return
         
@@ -387,8 +415,8 @@ class Thermostat(ClimateDevice):
         else:
             heat_temp_setpoint = self.thermostat["hspHome"]
 
-        self.data.daikinskyport.set_hold_temp(
-            self.thermostat["id"],
+        self.data.daikinskyport.set_temp_hold(
+            self.thermostat_index,
             cool_temp_setpoint,
             heat_temp_setpoint,
             self.hold_preference(),
@@ -415,7 +443,7 @@ class Thermostat(ClimateDevice):
             return
 
         self.data.daikinskyport.set_fan_mode(
-            self.thermostat["id"],
+            self.thermostat_index,
             FAN_TO_DAIKIN_FAN[fan_mode]
         )
         
@@ -458,7 +486,7 @@ class Thermostat(ClimateDevice):
 
     def set_humidity(self, humidity):
         """Set the humidity level."""
-        self.data.daikinskyport.set_humidity(self.thermostat["id"], humidity)
+        self.data.daikinskyport.set_humidity(self.thermostat_index, humidity)
 
     def set_hvac_mode(self, hvac_mode):
         """Set HVAC mode (auto, auxHeatOnly, cool, heat, off)."""
@@ -468,14 +496,27 @@ class Thermostat(ClimateDevice):
         if daikin_value is None:
             _LOGGER.error("Invalid mode for set_hvac_mode: %s", hvac_mode)
             return
-        self.data.daikinskyport.set_hvac_mode(self.thermostat["id"], daikin_value)
+        self.data.daikinskyport.set_hvac_mode(self.thermostat_index, daikin_value)
         self._hvac_mode = hvac_mode
         self.update_without_throttle = True
 
     def resume_program(self):
         """Resume the thermostat schedule program."""
         self.data.daikinskyport.resume_program(
-            self.thermostat["id"]
+            self.thermostat_index
+        )
+        self.update_without_throttle = True
+
+    def set_fan_schedule(self, start=None, stop=None, interval=None):
+        """Set the thermostat fan schedule."""
+        if start is None:
+            start = self.thermostat["fanCirculateStart"]
+        if stop is None:
+            stop = self.thermostat["fanCirculateStop"]
+        if interval is None:
+            interval = self.thermostat["fanCirculateDuration"]
+        self.data.daikinskyport.set_fan_schedule(
+            self.thermostat_index, start, stop, interval
         )
         self.update_without_throttle = True
 
