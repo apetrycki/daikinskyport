@@ -6,7 +6,7 @@ from typing import Optional
 
 import voluptuous as vol
 
-from homeassistant.components import daikinskyport
+from . import DATA_DAIKINSKYPORT
 from homeassistant.components.climate import ClimateDevice
 from homeassistant.components.climate.const import (
     DOMAIN,
@@ -139,7 +139,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the Daikin Skyport Thermostat Platform."""
     if discovery_info is None:
         return
-    data = daikinskyport.NETWORK
+    data = hass.data.get(DATA_DAIKINSKYPORT)
     
     devices = [
         Thermostat(data, index)

@@ -1,5 +1,5 @@
 """Support for Daikin Skyport sensors."""
-from homeassistant.components import daikinskyport
+from . import DATA_DAIKINSKYPORT
 from homeassistant.const import (
     DEVICE_CLASS_HUMIDITY,
     DEVICE_CLASS_TEMPERATURE,
@@ -69,14 +69,14 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the Daikin Skyport sensors."""
     if discovery_info is None:
         return
-    data = daikinskyport.NETWORK
+    data = hass.data.get(DATA_DAIKINSKYPORT)
     dev = list()
     for index in range(len(data.daikinskyport.thermostats)):
         for sensor in data.daikinskyport.get_sensors(index):
             if sensor["type"] not in ("temperature", "humidity", "score", "ozone", "particle", "VOC"):
                 continue
                 
-            dev.append(DaikinSkyportSensor(sensor["name"], sensor["type"], index))
+            dev.append(DaikinSkyportSensor(data, sensor["name"], sensor["type"], index))
 
     add_entities(dev, True)
 
@@ -84,9 +84,10 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 class DaikinSkyportSensor(Entity):
     """Representation of a Daikin sensor."""
 
-    def __init__(self, sensor_name, sensor_type, sensor_index):
+    def __init__(self, data, sensor_name, sensor_type, sensor_index):
         """Initialize the sensor."""
         self._name = "{} {}".format(sensor_name, SENSOR_TYPES[sensor_type]["device_class"])
+        self._data = data
         self._sensor_name = sensor_name
         self._type = sensor_type
         self._index = sensor_index
@@ -122,7 +123,7 @@ class DaikinSkyportSensor(Entity):
 
     def update(self):
         """Get the latest state of the sensor."""
-        data = daikinskyport.NETWORK
+        data = self._data
         data.update()
         for sensor in data.daikinskyport.get_sensors(self._index):
             if sensor["type"] == self._type and self._sensor_name == sensor["name"]:
