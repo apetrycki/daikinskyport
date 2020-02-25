@@ -3,7 +3,6 @@ from datetime import datetime, timedelta
 from pytz import timezone, utc
 import logging
 
-from homeassistant.components import daikinskyport
 from homeassistant.components.weather import (
     ATTR_FORECAST_CONDITION,
     ATTR_FORECAST_TEMP,
@@ -13,7 +12,10 @@ from homeassistant.components.weather import (
     WeatherEntity,
 )
 from homeassistant.const import TEMP_CELSIUS
-
+from .const import (
+    _LOGGER,
+    DOMAIN,
+)
 ATTR_FORECAST_TEMP_HIGH = "temphigh"
 ATTR_FORECAST_PRESSURE = "pressure"
 ATTR_FORECAST_VISIBILITY = "visibility"
@@ -21,17 +23,15 @@ ATTR_FORECAST_HUMIDITY = "humidity"
 
 MISSING_DATA = -5002
 
-_LOGGER = logging.getLogger(__name__)
-
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the Daikin Skyport weather platform."""
     if discovery_info is None:
         return
     dev = list()
-    data = daikinskyport.NETWORK
+    data = hass.data[DOMAIN]
     for index in range(len(data.daikinskyport.thermostats)):
         thermostat = data.daikinskyport.get_thermostat(index)
-        dev.append(DaikinSkyportWeather(thermostat["name"], index))
+        dev.append(DaikinSkyportWeather(data,thermostat["name"], index))
 
     add_entities(dev, True)
 
@@ -39,8 +39,9 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 class DaikinSkyportWeather(WeatherEntity):
     """Representation of Daikin Skyport weather data."""
 
-    def __init__(self, name, index):
+    def __init__(self, data, name, index):
         """Initialize the Daikin Skyport weather platform."""
+        self.data = data
         self._name = name
         self._index = index
         self.weather = None
@@ -108,10 +109,9 @@ class DaikinSkyportWeather(WeatherEntity):
 
     def update(self):
         """Get the latest state of the sensor."""
-        data = daikinskyport.NETWORK
-        data.update()
+        self.data.update()
         self.weather = dict()
-        thermostat = data.daikinskyport.get_thermostat(self._index)
+        thermostat = self.data.daikinskyport.get_thermostat(self._index)
         for key in thermostat:
             if key.startswith('weather'):
                 self.weather[key] = thermostat[key]

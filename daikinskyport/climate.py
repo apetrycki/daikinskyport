@@ -1,12 +1,10 @@
 """Support for Daikin Skyport Thermostats."""
 import collections
-import logging
 from time import sleep
 from typing import Optional
 
 import voluptuous as vol
 
-from homeassistant.components import daikinskyport
 from homeassistant.components.climate import ClimateDevice
 from homeassistant.components.climate.const import (
     DOMAIN,
@@ -42,8 +40,10 @@ from homeassistant.const import (
 )
 import homeassistant.helpers.config_validation as cv
 
-_CONFIGURING = {}
-_LOGGER = logging.getLogger(__name__)
+from .const import (
+    _LOGGER,
+    DOMAIN,
+)
 
 #Hold settings (manual mode)
 HOLD_NEXT_TRANSITION = 0
@@ -139,7 +139,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the Daikin Skyport Thermostat Platform."""
     if discovery_info is None:
         return
-    data = daikinskyport.NETWORK
+    data = hass.data[DOMAIN]
     
     devices = [
         Thermostat(data, index)
