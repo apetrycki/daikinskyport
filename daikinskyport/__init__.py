@@ -14,12 +14,13 @@ from homeassistant.const import (
 from homeassistant.util import Throttle
 from homeassistant.util.json import save_json
 
-_CONFIGURING = {}
-_LOGGER = logging.getLogger(__name__)
+from .daikinskyport import DaikinSkyport
+from .const import (
+    _LOGGER,
+    DOMAIN,
+)
 
 CONF_HOLD_TEMP = "hold_temp"
-
-DOMAIN = "daikinskyport"
 
 DAIKINSKYPORT_CONFIG_FILE = "daikinskyport.conf"
 
@@ -40,56 +41,11 @@ CONFIG_SCHEMA = vol.Schema(
     extra=vol.ALLOW_EXTRA,
 )
 
-
-def request_configuration(network, hass, config):
-    """Request configuration steps from the user."""
-    configurator = hass.components.configurator
-    if "daikinskyport" in _CONFIGURING:
-        configurator.notify_errors(
-            _CONFIGURING["daikinskyport"], "Failed to register, please try again."
-        )
-
-        return
-
-    def daikinskyport_configuration_callback(callback_data):
-        """Handle configuration callbacks."""
-        network.request_tokens()
-        network.update()
-        setup_daikinskyport(hass, network, config)
-
-'''
-    _CONFIGURING["daikinskyport"] = configurator.request_config(
-        "Daikin Skyport",
-        daikinskyport_configuration_callback,
-        description=(
-            "Please authorize this app at https://www.ecobee.com/consumer"
-            "portal/index.html with pin code: " + network.pin
-        ),
-        description_image="/static/images/config_ecobee_thermostat.png",
-        submit_caption="I have authorized the app.",
-    )
-'''
-
-def setup_daikinskyport(hass, network, config):
-    """Set up the Daikin Skyport thermostat."""
-    if "daikinskyport" in _CONFIGURING:
-        configurator = hass.components.configurator
-        configurator.request_done(_CONFIGURING.pop("daikinskyport"))
-
-    hold_temp = config[DOMAIN].get(CONF_HOLD_TEMP)
-
-    discovery.load_platform(hass, "climate", DOMAIN, {"hold_temp": hold_temp}, config)
-    discovery.load_platform(hass, "sensor", DOMAIN, {}, config)
-#    discovery.load_platform(hass, "binary_sensor", DOMAIN, {}, config)
-    discovery.load_platform(hass, "weather", DOMAIN, {}, config)
-
-
 class DaikinSkyportData:
     """Get the latest data and update the states."""
 
     def __init__(self, config_file):
         """Init the Daikin Skyport data object."""
-        from daikinskyport import DaikinSkyport
 
         self.daikinskyport = DaikinSkyport(config_file)
 
@@ -106,10 +62,6 @@ def setup(hass, config):
     Will automatically load thermostat and sensor components to support
     devices discovered on the network.
     """
-    global NETWORK
-
-    if "daikinskyport" in _CONFIGURING:
-        return
 
     # Create daikinskyport.conf if it doesn't exist
     if not os.path.isfile(hass.config.path(DAIKINSKYPORT_CONFIG_FILE)):
@@ -118,8 +70,14 @@ def setup(hass, config):
                       }
         save_json(hass.config.path(DAIKINSKYPORT_CONFIG_FILE), jsonconfig)
 
-    NETWORK = DaikinSkyportData(hass.config.path(DAIKINSKYPORT_CONFIG_FILE))
+    data = DaikinSkyportData(hass.config.path(DAIKINSKYPORT_CONFIG_FILE))
+    hass.data[DOMAIN] = data
+    
+    hold_temp = config[DOMAIN].get(CONF_HOLD_TEMP)
 
-    setup_daikinskyport(hass, NETWORK.daikinskyport, config)
-
+    discovery.load_platform(hass, "climate", DOMAIN, {"hold_temp": hold_temp}, config)
+    discovery.load_platform(hass, "sensor", DOMAIN, {}, config)
+#    discovery.load_platform(hass, "binary_sensor", DOMAIN, {}, config)
+    discovery.load_platform(hass, "weather", DOMAIN, {}, config)
+    
     return True
