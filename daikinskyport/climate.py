@@ -5,7 +5,7 @@ from typing import Optional
 
 import voluptuous as vol
 
-from homeassistant.components.climate import ClimateDevice
+from homeassistant.components.climate import ClimateEntity
 from homeassistant.components.climate.const import (
     DOMAIN,
     HVAC_MODE_COOL,
@@ -197,7 +197,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
         schema=FAN_SCHEDULE_SCHEMA,
     )
 
-class Thermostat(ClimateDevice):
+class Thermostat(ClimateEntity):
     """A thermostat class for Daikin Skyport Thermostats."""
 
     def __init__(self, data, thermostat_index):
