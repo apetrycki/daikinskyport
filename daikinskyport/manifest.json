@@ -1,9 +1,11 @@
 {
   "domain": "daikinskyport",
   "name": "Daikin Skyport",
-  "documentation": "https://www.home-assistant.io/components/daikinskyport",
+  "documentation": "https://github.com/apetrycki/daikinskyport",
+  "issue_tracker": "https://github.com/apetrycki/daikinskyport/issues",
   "config_flow": false,
   "requirements": [],
   "dependencies": ["configurator"],
-  "codeowners": []
+  "codeowners": ["@apetrycki"],
+  "version": "0.1"
 }
