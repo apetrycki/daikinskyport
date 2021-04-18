@@ -242,4 +242,5 @@ Determining unit capabilities:
 "modeEmHeatAvailable":true if Emergency Heat mode is enabled,
 ```
 
-
+TJCoffey has also been working on deciphering the Daikin API info and has some more updated information on thermostat parameters:
+https://github.com/TJCoffey/DaikinSkyportToMQTT/blob/main/ThermostatParameters.md
