@@ -253,6 +253,12 @@ class DaikinSkyport(object):
         log_msg_action = "set fan mode"
         return self.make_request(index, body, log_msg_action)
 
+    def set_fan_speed(self, index, fan_speed):
+        ''' Set fan speed. Values: low (0), medium (1), high (2) '''
+        body = {"fanCirculateSpeed": fan_speed}
+        log_msg_action = "set fan speed"
+        return self.make_request(index, body, log_msg_action)
+
     def set_fan_clean(self, index, active):
         ''' Enable/disable fan clean mode.  This runs the fan at high speed to clear out the air.
         active values are true/false'''

@@ -21,6 +21,9 @@ from homeassistant.components.climate.const import (
     PRESET_AWAY,
     FAN_AUTO,
     FAN_ON,
+    FAN_LOW,
+    FAN_MEDIUM,
+    FAN_HIGH,
     CURRENT_HVAC_IDLE,
     CURRENT_HVAC_HEAT,
     CURRENT_HVAC_COOL,
@@ -83,11 +86,22 @@ DAIKIN_FAN_TO_HASS = collections.OrderedDict(
     ]
 )
 
+DAIKIN_FAN_SPEED_TO_HASS = collections.OrderedDict(
+    [
+        (0, FAN_LOW),
+        (1, FAN_MEDIUM),
+        (2, FAN_HIGH),
+    ]
+)
+
 FAN_TO_DAIKIN_FAN = collections.OrderedDict(
     [
         (FAN_AUTO, 0),
         (FAN_ON, 1),
         (FAN_SCHEDULE, 2),
+        (FAN_LOW, 0),
+        (FAN_MEDIUM, 1),
+        (FAN_HIGH, 2),
     ]
 )
 
@@ -210,6 +224,7 @@ class Thermostat(ClimateEntity):
         self._heat_setpoint = self.thermostat["hspActive"]
         self._hvac_mode = DAIKIN_HVAC_TO_HASS[self.thermostat["mode"]]
         self._fan_mode = DAIKIN_FAN_TO_HASS[self.thermostat["fanCirculate"]]
+        self._fan_speed = DAIKIN_FAN_SPEED_TO_HASS[self.thermostat["fanCirculateSpeed"]]
         if self.thermostat["geofencingAway"]:
             self._preset_mode = PRESET_AWAY
         elif self.thermostat["schedOverride"] == 1:
@@ -233,7 +248,7 @@ class Thermostat(ClimateEntity):
                               PRESET_TEMP_HOLD,
                               PRESET_AWAY
                               }
-        self._fan_modes = [FAN_AUTO, FAN_ON, FAN_SCHEDULE]
+        self._fan_modes = [FAN_AUTO, FAN_ON, FAN_LOW, FAN_MEDIUM, FAN_HIGH, FAN_SCHEDULE]
         self.update_without_throttle = False
 
     def update(self):
@@ -250,6 +265,7 @@ class Thermostat(ClimateEntity):
         self._heat_setpoint = self.thermostat["hspActive"]
         self._hvac_mode = DAIKIN_HVAC_TO_HASS[self.thermostat["mode"]]
         self._fan_mode = DAIKIN_FAN_TO_HASS[self.thermostat["fanCirculate"]]
+        self._fan_speed = DAIKIN_FAN_SPEED_TO_HASS[self.thermostat["fanCirculateSpeed"]]
         if self.thermostat["geofencingAway"]:
             self._preset_mode = PRESET_AWAY
         elif self.thermostat["schedOverride"] == 1:
@@ -320,6 +336,11 @@ class Thermostat(ClimateEntity):
     def fan_mode(self):
         """Return the fan setting."""
         return self._fan_mode
+
+    @property
+    def fan_speed(self):
+        """Return the fan setting."""
+        return self._fan_speed
 
     @property
     def fan_modes(self):
@@ -438,20 +459,42 @@ class Thermostat(ClimateEntity):
 
     def set_fan_mode(self, fan_mode):
         """Set the fan mode.  Valid values are "on" or "auto"."""
-        if fan_mode != FAN_ON and fan_mode != FAN_AUTO and fan_mode != FAN_SCHEDULE:
+        if fan_mode == FAN_ON or fan_mode == FAN_AUTO or fan_mode == FAN_SCHEDULE:
+            self.data.daikinskyport.set_fan_mode(
+                self.thermostat_index,
+                FAN_TO_DAIKIN_FAN[fan_mode]
+            )
+            
+            self._fan_mode = fan_mode
+            self.update_without_throttle = True
+
+            _LOGGER.info("Setting fan mode to: %s", fan_mode)
+        elif fan_mode == FAN_LOW or fan_mode == FAN_MEDIUM or fan_mode == FAN_HIGH:
+            # Start the fan if it's off.  
+            if self._fan_mode == FAN_AUTO:
+                self.data.daikinskyport.set_fan_mode(
+                    self.thermostat_index,
+                    FAN_TO_DAIKIN_FAN[FAN_ON]
+                )
+                
+                self._fan_mode = fan_mode
+
+                _LOGGER.info("Setting fan mode to: %s", fan_mode)
+
+            self.data.daikinskyport.set_fan_speed(
+                self.thermostat_index,
+                FAN_TO_DAIKIN_FAN[fan_mode]
+            )
+            
+            self._fan_speed = FAN_TO_DAIKIN_FAN[fan_mode]
+            self.update_without_throttle = True
+
+            _LOGGER.info("Setting fan speed to: %s", self._fan_speed)
+        else:
             error = "Invalid fan_mode value:  Valid values are 'on' or 'auto'"
             _LOGGER.error(error)
             return
 
-        self.data.daikinskyport.set_fan_mode(
-            self.thermostat_index,
-            FAN_TO_DAIKIN_FAN[fan_mode]
-        )
-        
-        self._fan_mode = fan_mode
-        self.update_without_throttle = True
-
-        _LOGGER.info("Setting fan mode to: %s", fan_mode)
 
     def set_temp_hold(self, temp):
         """Set temperature hold in modes other than auto."""
