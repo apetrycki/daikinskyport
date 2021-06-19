@@ -459,8 +459,8 @@ class Thermostat(ClimateEntity):
 
     def set_fan_mode(self, fan_mode):
         """Set the fan mode.  Valid values are "on" or "auto"."""
-        if fan_mode == FAN_ON or fan_mode == FAN_AUTO or fan_mode == FAN_SCHEDULE:
-            self.data.daikinskyport.set_fan_mode(
+        if fan_mode in {FAN_ON, FAN_AUTO, FAN_SCHEDULE}:
+                self.data.daikinskyport.set_fan_mode(
                 self.thermostat_index,
                 FAN_TO_DAIKIN_FAN[fan_mode]
             )
@@ -469,7 +469,7 @@ class Thermostat(ClimateEntity):
             self.update_without_throttle = True
 
             _LOGGER.info("Setting fan mode to: %s", fan_mode)
-        elif fan_mode == FAN_LOW or fan_mode == FAN_MEDIUM or fan_mode == FAN_HIGH:
+        elif fan_mode in {FAN_LOW, FAN_MEDIUM, FAN_HIGH}:
             # Start the fan if it's off.  
             if self._fan_mode == FAN_AUTO:
                 self.data.daikinskyport.set_fan_mode(
