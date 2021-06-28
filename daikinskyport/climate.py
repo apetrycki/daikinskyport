@@ -460,7 +460,7 @@ class Thermostat(ClimateEntity):
     def set_fan_mode(self, fan_mode):
         """Set the fan mode.  Valid values are "on" or "auto"."""
         if fan_mode in {FAN_ON, FAN_AUTO, FAN_SCHEDULE}:
-                self.data.daikinskyport.set_fan_mode(
+            self.data.daikinskyport.set_fan_mode(
                 self.thermostat_index,
                 FAN_TO_DAIKIN_FAN[fan_mode]
             )
