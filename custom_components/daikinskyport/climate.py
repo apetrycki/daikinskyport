@@ -173,7 +173,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
             target_thermostats = devices
 
         for thermostat in target_thermostats:
-            thermostat.resume_program(thermostat["id"])
+            thermostat.resume_program()
 
             thermostat.schedule_update_ha_state(True)
 
