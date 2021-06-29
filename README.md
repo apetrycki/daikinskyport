@@ -51,3 +51,4 @@ Once Core has restarted, navigate to **Configuration** in the sidebar, then **En
 
 - Fix services - not sure what I'm doing wrong, it looks to me the same as the ecobee
 - Get rid of time on weather forecast
+- Create UI Config Flow
