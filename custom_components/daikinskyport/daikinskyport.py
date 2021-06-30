@@ -235,7 +235,7 @@ class DaikinSkyport(object):
         log_msg_action = "set HVAC mode"
         return self.make_request(index, body, log_msg_action)
 
-    def set_fan_schedule(self, deviceID, start_time, end_time, duration):
+    def set_fan_schedule(self, start_time, end_time, duration):
         ''' Schedule to run the fan.  
         start_time is the beginning of the schedule per day.  It is an integer value where every 15 minutes from 00:00 is 1 (each hour = 4)
         end_time is the end of the schedule each day.  Values are same as start_time
@@ -319,11 +319,12 @@ class DaikinSkyport(object):
         log_msg_action = "resume program"
         return self.make_request(index, body, log_msg_action)
 
-    def set_fan_schedule(self, index, start, stop, interval):
+    def set_fan_schedule(self, index, start, stop, interval, speed):
         ''' Set the fan schedule parameters '''
         body = {"fanCirculateStart": start,
                 "fanCirculateStop": stop,
-                "fanCirculateDuration": interval
+                "fanCirculateDuration": interval,
+                "fanCirculateSpeed": speed
                 }
 
         log_msg_action = "set fan schedule"

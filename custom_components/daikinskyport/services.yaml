@@ -10,7 +10,7 @@ daikin_set_fan_schedule:
     Set a schedule for running the HVAC fan to clean the air
   fields:
     entity_id:
-      description: thermostat on which to resume the schedule.
+      description: thermostat on which to set the schedule.
       example: "climate.kitchen"
     start_time:
       description: is the beginning of the schedule per day.  It is an integer value where every 15 minutes from 00:00 is 1 (each hour = 4)
@@ -21,4 +21,5 @@ daikin_set_fan_schedule:
     interval:
       description:  the run time per hour of the schedule. Options are - on the full time (0), 5mins (1), 15mins (2), 30mins (3), and 45mins (4)
       example: "2"
-      
+    fan_speed:
+      description: the speed at which the fan runs during the schedule.  Options are low (0), medium (1), high (2)

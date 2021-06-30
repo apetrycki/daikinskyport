@@ -64,8 +64,9 @@ FAN_SCHEDULE = "Schedule"
 
 #Fan Schedule values
 ATTR_FAN_START_TIME = "start_time"
-ATTR_FAN_STOP_TIME = "stop_time"
+ATTR_FAN_STOP_TIME = "end_time"
 ATTR_FAN_INTERVAL = "interval"
+ATTR_FAN_SPEED = "fan_speed"
 
 # Order matters, because for reverse mapping we don't want to map HEAT to AUX
 DAIKIN_HVAC_TO_HASS = collections.OrderedDict(
@@ -134,9 +135,10 @@ RESUME_PROGRAM_SCHEMA = vol.Schema(
 FAN_SCHEDULE_SCHEMA = vol.Schema(
     {
         vol.Optional(ATTR_ENTITY_ID): cv.entity_ids,
-        vol.Optional(ATTR_FAN_START_TIME): cv.string,
-        vol.Optional(ATTR_FAN_STOP_TIME): cv.string,
-        vol.Optional(ATTR_FAN_INTERVAL): cv.positive_int
+        vol.Optional(ATTR_FAN_START_TIME): cv.positive_int,
+        vol.Optional(ATTR_FAN_STOP_TIME): cv.positive_int,
+        vol.Optional(ATTR_FAN_INTERVAL): cv.positive_int,
+        vol.Optional(ATTR_FAN_SPEED): cv.positive_int
     }
 )
 
@@ -184,6 +186,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
         start = service.data.get(ATTR_FAN_START_TIME)
         stop = service.data.get(ATTR_FAN_STOP_TIME)
         interval = service.data.get(ATTR_FAN_INTERVAL)
+        speed = service.data.get(ATTR_FAN_SPEED)
 
         if entity_id:
             target_thermostats = [
@@ -193,7 +196,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
             target_thermostats = devices
 
         for thermostat in target_thermostats:
-            thermostat.set_fan_schedule(start, stop, interval)
+            thermostat.set_fan_schedule(start, stop, interval, speed)
 
             thermostat.schedule_update_ha_state(True)
 
@@ -551,7 +554,7 @@ class Thermostat(ClimateEntity):
         )
         self.update_without_throttle = True
 
-    def set_fan_schedule(self, start=None, stop=None, interval=None):
+    def set_fan_schedule(self, start=None, stop=None, interval=None, speed=None):
         """Set the thermostat fan schedule."""
         if start is None:
             start = self.thermostat["fanCirculateStart"]
@@ -560,7 +563,7 @@ class Thermostat(ClimateEntity):
         if interval is None:
             interval = self.thermostat["fanCirculateDuration"]
         self.data.daikinskyport.set_fan_schedule(
-            self.thermostat_index, start, stop, interval
+            self.thermostat_index, start, stop, interval, speed
         )
         self.update_without_throttle = True
 
