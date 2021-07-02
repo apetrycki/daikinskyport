@@ -271,6 +271,10 @@ class DaikinSkyport(object):
         ''' Set a temporary hold '''
         if hold_duration is None:
             hold_duration = self.thermostats[index]["schedOverrideDuration"]
+        if cool_temp is None:
+            cool_temp = self.thermostats[index]["cspHome"]
+        if heat_temp is None:
+            heat_temp = self.thermostats[index]["hspHome"]
         body = {"hspHome": round(heat_temp, 1),
                 "cspHome": round(cool_temp, 1),
                 "schedOverride": 1,
@@ -279,7 +283,7 @@ class DaikinSkyport(object):
         log_msg_action = "set hold temp"
         return self.make_request(index, body, log_msg_action)
 
-    def set_permanent_hold(self, index, active, cool_temp=None, heat_temp=None):
+    def set_permanent_hold(self, index, cool_temp=None, heat_temp=None):
         ''' Set a climate hold - ie enable/disable schedule. 
         active values are true/false
         hold_duration is NEXT_SCHEDULE'''
@@ -289,8 +293,8 @@ class DaikinSkyport(object):
             heat_temp = self.thermostats[index]["hspHome"]
         body = {"hspHome": round(heat_temp, 1),
                 "cspHome": round(cool_temp, 1),
-                "schedEnabled": active,
-                "schedOverrideDuration": hold_duration
+                "schedOverride": 1,
+                "schedEnabled": False
                 }
         log_msg_action = "set permanent hold"
         return self.make_request(index, body, log_msg_action)

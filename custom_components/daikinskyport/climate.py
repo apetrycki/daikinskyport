@@ -440,11 +440,18 @@ class Thermostat(ClimateEntity):
         else:
             heat_temp_setpoint = self.thermostat["hspHome"]
 
-        self.data.daikinskyport.set_temp_hold(
-            self.thermostat_index,
-            cool_temp_setpoint,
-            heat_temp_setpoint,
-            self.hold_preference(),
+        if self._preset_mode == PRESET_MANUAL:
+            self.data.daikinskyport.set_permanent_hold(
+                self.thermostat_index,
+                cool_temp_setpoint,
+                heat_temp_setpoint
+        )
+        else:
+            self.data.daikinskyport.set_temp_hold(
+                self.thermostat_index,
+                cool_temp_setpoint,
+                heat_temp_setpoint,
+                self.hold_preference(),
         )
         
         self._cool_setpoint = cool_temp_setpoint

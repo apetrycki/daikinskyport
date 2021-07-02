@@ -12,6 +12,7 @@ from homeassistant.components.weather import (
     WeatherEntity,
 )
 from homeassistant.const import TEMP_CELSIUS
+from homeassistant.util import dt as dt_util
 from .const import (
     _LOGGER,
     DOMAIN,
@@ -92,16 +93,15 @@ class DaikinSkyportWeather(WeatherEntity):
         """Return the forecast array."""
         try:
             forecasts = []
-            tz = timezone(self.weather["tz"])
-            current_utc = utc.localize(datetime.utcnow())
-            for day in [1, 2, 3, 4, 5]:
-                date_time = current_utc.astimezone(tz) + timedelta(days=(day-1))
+            date = dt_util.utcnow()
+            for day in range(1, 5):
                 forecast = {
-                    ATTR_FORECAST_TIME: date_time.date().isoformat(),
+                    ATTR_FORECAST_TIME: date.isoformat(),
                     ATTR_FORECAST_CONDITION: self.weather["weatherDay" + str(day) + "Cond"],
                     ATTR_FORECAST_TEMP: float(self.weather["weatherDay" + str(day) + "TempC"]),
                     ATTR_FORECAST_HUMIDITY: int(self.weather["weatherDay" + str(day) + "Hum"])
                     }
+                date += timedelta(days=1)
                 forecasts.append(forecast)
             return forecasts
         except (ValueError, IndexError, KeyError):
