@@ -210,7 +210,7 @@ class DaikinSkyport(object):
         url = 'https://api.daikinskyport.com/deviceData/' + deviceID
         header = {'Content-Type': 'application/json;charset=UTF-8',
                   'Authorization': 'Bearer ' + self.access_token}
-        logger.error("Make Request: Device: %s, Body: %s", deviceID, body)
+        logger.info("Make Request: Device: %s, Body: %s", deviceID, body)
         try:
             request = requests.put(url, headers=header, json=body)
         except RequestException:
@@ -332,6 +332,16 @@ class DaikinSkyport(object):
                 }
 
         log_msg_action = "set fan schedule"
+        return self.make_request(index, body, log_msg_action)
+
+    def set_night_mode(self, index, start, stop, enable):
+        ''' Set the night mode parameters '''
+        body = {"nightModeStart": start,
+                "nightModeStop": stop,
+                "nightModeEnabled": enable,
+                }
+
+        log_msg_action = "set night mode"
         return self.make_request(index, body, log_msg_action)
 
     def set_humidity(self, index, humidity_low=None, humidity_high=None):

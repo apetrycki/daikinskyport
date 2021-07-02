@@ -68,6 +68,11 @@ ATTR_FAN_STOP_TIME = "end_time"
 ATTR_FAN_INTERVAL = "interval"
 ATTR_FAN_SPEED = "fan_speed"
 
+#Night Mode values
+ATTR_NIGHT_MODE_START_TIME = "start_time"
+ATTR_NIGHT_MODE_END_TIME = "end_time"
+ATTR_NIGHT_MODE_ENABLE = "enable"
+
 # Order matters, because for reverse mapping we don't want to map HEAT to AUX
 DAIKIN_HVAC_TO_HASS = collections.OrderedDict(
     [
@@ -125,6 +130,7 @@ PRESET_TO_DAIKIN_HOLD = {
 
 SERVICE_RESUME_PROGRAM = "daikin_resume_program"
 SERVICE_SET_FAN_SCHEDULE = "daikin_set_fan_schedule"
+SERVICE_SET_NIGHT_MODE = "daikin_set_night_mode"
 
 RESUME_PROGRAM_SCHEMA = vol.Schema(
     {
@@ -139,6 +145,15 @@ FAN_SCHEDULE_SCHEMA = vol.Schema(
         vol.Optional(ATTR_FAN_STOP_TIME): cv.positive_int,
         vol.Optional(ATTR_FAN_INTERVAL): cv.positive_int,
         vol.Optional(ATTR_FAN_SPEED): cv.positive_int
+    }
+)
+
+NIGHT_MODE_SCHEMA = vol.Schema(
+    {
+        vol.Optional(ATTR_ENTITY_ID): cv.entity_ids,
+        vol.Optional(ATTR_NIGHT_MODE_START_TIME): cv.positive_int,
+        vol.Optional(ATTR_NIGHT_MODE_END_TIME): cv.positive_int,
+        vol.Optional(ATTR_NIGHT_MODE_ENABLE): cv.boolean,
     }
 )
 
@@ -200,6 +215,26 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 
             thermostat.schedule_update_ha_state(True)
 
+    def set_night_mode_service(service):
+        """Set night mode on the target thermostats."""
+        entity_id = service.data.get(ATTR_ENTITY_ID)
+        
+        start = service.data.get(ATTR_NIGHT_MODE_START_TIME)
+        stop = service.data.get(ATTR_NIGHT_MODE_END_TIME)
+        enable = service.data.get(ATTR_NIGHT_MODE_ENABLE)
+
+        if entity_id:
+            target_thermostats = [
+                device for device in devices if device.entity_id in entity_id
+            ]
+        else:
+            target_thermostats = devices
+
+        for thermostat in target_thermostats:
+            thermostat.set_night_mode(start, stop, enable)
+
+            thermostat.schedule_update_ha_state(True)
+
     hass.services.register(
         DOMAIN,
         SERVICE_RESUME_PROGRAM,
@@ -212,6 +247,13 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
         SERVICE_SET_FAN_SCHEDULE,
         set_fan_schedule_service,
         schema=FAN_SCHEDULE_SCHEMA,
+    )
+
+    hass.services.register(
+        DOMAIN,
+        SERVICE_SET_NIGHT_MODE,
+        set_night_mode_service,
+        schema=NIGHT_MODE_SCHEMA,
     )
 
 class Thermostat(ClimateEntity):
@@ -389,7 +431,9 @@ class Thermostat(ClimateEntity):
             "heatpump_demand": round(self.thermostat["ctOutdoorHeatRequestedDemand"] / 2, 1),
             "dehumidification_demand": round(self.thermostat["ctOutdoorDeHumidificationRequestedDemand"] / 2, 1),
             "humidification_demand": round(self.thermostat["ctAHHumidificationRequestedDemand"] / 2, 1),
-            "thermostat_version": self.thermostat["statFirmware"],            
+            "thermostat_version": self.thermostat["statFirmware"],
+            "night_mode_active": self.thermostat["nightModeActive"],
+            "night_mode_enabled": self.thermostat["nightModeEnabled"]
         }
 
     @property
@@ -571,6 +615,19 @@ class Thermostat(ClimateEntity):
             interval = self.thermostat["fanCirculateDuration"]
         self.data.daikinskyport.set_fan_schedule(
             self.thermostat_index, start, stop, interval, speed
+        )
+        self.update_without_throttle = True
+
+    def set_night_mode(self, start=None, stop=None, enable=None):
+        """Set the thermostat night mode."""
+        if start is None:
+            start = self.thermostat["nightModeStart"]
+        if stop is None:
+            stop = self.thermostat["nightModeStop"]
+        if enable is None:
+            enable = self.thermostat["nightModeEnabled"]
+        self.data.daikinskyport.set_night_mode(
+            self.thermostat_index, start, stop, enable
         )
         self.update_without_throttle = True
 

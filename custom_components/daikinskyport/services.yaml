@@ -23,3 +23,19 @@ daikin_set_fan_schedule:
       example: "2"
     fan_speed:
       description: the speed at which the fan runs during the schedule.  Options are low (0), medium (1), high (2)
+daikin_set_night_mode:
+  description: >-
+    Enable/Disable night mode and set time night mode occurs
+  fields:
+    entity_id:
+      description: thermostat on which to set the schedule.
+      example: "climate.kitchen"
+    start_time:
+      description: when to start night mode. It is an integer value where every 15 minutes from 00:00 is 1 (each hour = 4)
+      example: "92"
+    end_time:
+      description: when to end night mode. It is an integer value where every 15 minutes from 00:00 is 1 (each hour = 4)
+      example: "24"
+    enable:
+      description: Enable/Disable night mode.  True = enabled
+      example: True
