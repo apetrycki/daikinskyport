@@ -179,6 +179,8 @@ class DaikinSkyport(object):
         sensors = list()
         sensors.append({"name": self.thermostats[index]['name'] + " Outdoor", "value": self.thermostats[index]['tempOutdoor'], "type": "temperature"})
         sensors.append({"name": self.thermostats[index]['name'] + " Outdoor", "value": self.thermostats[index]['humOutdoor'], "type": "humidity"})
+        sensors.append({"name": self.thermostats[index]['name'] + " Indoor", "value": self.thermostats[index]['tempIndoor'], "type": "temperature"})
+        sensors.append({"name": self.thermostats[index]['name'] + " Indoor", "value": self.thermostats[index]['humIndoor'], "type": "humidity"})
         if self.thermostats[index]['aqOutdoorAvailable']:
             sensors.append({"name": self.thermostats[index]['name'] + " Outdoor", "value": self.thermostats[index]['aqOutdoorParticles'], "type": "particle"})
             sensors.append({"name": self.thermostats[index]['name'] + " Outdoor", "value": self.thermostats[index]['aqOutdoorValue'], "type": "score"})
