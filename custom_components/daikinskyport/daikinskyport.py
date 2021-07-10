@@ -166,7 +166,7 @@ class DaikinSkyport(object):
             logger.info("Error connecting to Daikin Skyport while attempting to get "
                         "thermostat data.  Refreshing tokens and trying again.")
             if self.refresh_tokens():
-                return self.get_thermostat_info()
+                return self.get_thermostat_info(deviceid)
             else:
                 return None
 
