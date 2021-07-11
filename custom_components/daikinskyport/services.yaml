@@ -67,3 +67,14 @@ daikin_set_thermostat_schedule:
     cool_temp_setpoint:
       description: temperature to turn the air conditioning on at. Defaults to previous setting
       example: "75"
+daikin_set_oneclean:
+  description: >-
+    Enable/Disable OneClean which runs the fan at high speed for 3 hours
+  fields:
+    entity_id:
+      description: thermostat on which to set the schedule.
+      example: "climate.kitchen"
+    enable:
+      description: Boolean to enable (True) or disable (False) OneClean.
+      example: "True"
+ 
