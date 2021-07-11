@@ -1,13 +1,13 @@
 """Support for Daikin Skyport Thermostats."""
 import collections
 from time import sleep
+from datetime import datetime
 from typing import Optional
 
 import voluptuous as vol
 
 from homeassistant.components.climate import ClimateEntity
 from homeassistant.components.climate.const import (
-    DOMAIN,
     HVAC_MODE_COOL,
     HVAC_MODE_HEAT,
     HVAC_MODE_AUTO,
@@ -48,6 +48,8 @@ from .const import (
     DOMAIN,
 )
 
+WEEKDAY = [ "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+
 #Hold settings (manual mode)
 HOLD_NEXT_TRANSITION = 0
 HOLD_1HR = 60
@@ -72,6 +74,18 @@ ATTR_FAN_SPEED = "fan_speed"
 ATTR_NIGHT_MODE_START_TIME = "start_time"
 ATTR_NIGHT_MODE_END_TIME = "end_time"
 ATTR_NIGHT_MODE_ENABLE = "enable"
+
+#Schedule Adjustment values
+ATTR_SCHEDULE_DAY = "day"
+ATTR_SCHEDULE_START_TIME = "start_time"
+ATTR_SCHEDULE_PART = "part"
+ATTR_SCHEDULE_PART_ENABLED = "enable"
+ATTR_SCHEDULE_PART_LABEL = "label"
+ATTR_SCHEDULE_HEATING_SETPOINT = "heat_temp_setpoint"
+ATTR_SCHEDULE_COOLING_SETPOINT = "cool_temp_setpoint"
+ATTR_SCHEDULE_MODE = "mode" #Unknown what this does right now
+ATTR_SCHEDULE_ACTION = "action" #Unknown what this does right now
+
 
 # Order matters, because for reverse mapping we don't want to map HEAT to AUX
 DAIKIN_HVAC_TO_HASS = collections.OrderedDict(
@@ -131,6 +145,7 @@ PRESET_TO_DAIKIN_HOLD = {
 SERVICE_RESUME_PROGRAM = "daikin_resume_program"
 SERVICE_SET_FAN_SCHEDULE = "daikin_set_fan_schedule"
 SERVICE_SET_NIGHT_MODE = "daikin_set_night_mode"
+SERVICE_SET_THERMOSTAT_SCHEDULE = "daikin_set_thermostat_schedule"
 
 RESUME_PROGRAM_SCHEMA = vol.Schema(
     {
@@ -154,6 +169,19 @@ NIGHT_MODE_SCHEMA = vol.Schema(
         vol.Optional(ATTR_NIGHT_MODE_START_TIME): cv.positive_int,
         vol.Optional(ATTR_NIGHT_MODE_END_TIME): cv.positive_int,
         vol.Optional(ATTR_NIGHT_MODE_ENABLE): cv.boolean,
+    }
+)
+
+THERMOSTAT_SCHEDULE_SCHEMA = vol.Schema(
+    {
+        vol.Optional(ATTR_ENTITY_ID): cv.entity_ids,
+        vol.Optional(ATTR_SCHEDULE_DAY): cv.string,
+        vol.Optional(ATTR_SCHEDULE_START_TIME): cv.positive_int,
+        vol.Optional(ATTR_SCHEDULE_PART): cv.positive_int,
+        vol.Optional(ATTR_SCHEDULE_PART_ENABLED): cv.boolean,
+        vol.Optional(ATTR_SCHEDULE_PART_LABEL): cv.string,
+        vol.Optional(ATTR_SCHEDULE_HEATING_SETPOINT): cv.positive_int,
+        vol.Optional(ATTR_SCHEDULE_COOLING_SETPOINT): cv.positive_int,
     }
 )
 
@@ -235,6 +263,30 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 
             thermostat.schedule_update_ha_state(True)
 
+    def set_thermostat_schedule_service(service):
+        """Set the thermostat schedule on the target thermostats."""
+        entity_id = service.data.get(ATTR_ENTITY_ID)
+        
+        day = service.data.get(ATTR_SCHEDULE_DAY)
+        start = service.data.get(ATTR_SCHEDULE_START_TIME)
+        part = service.data.get(ATTR_SCHEDULE_PART)
+        enable = service.data.get(ATTR_SCHEDULE_PART_ENABLED)
+        label = service.data.get(ATTR_SCHEDULE_PART_LABEL)
+        heating = service.data.get(ATTR_SCHEDULE_HEATING_SETPOINT)
+        cooling = service.data.get(ATTR_SCHEDULE_COOLING_SETPOINT)
+
+        if entity_id:
+            target_thermostats = [
+                device for device in devices if device.entity_id in entity_id
+            ]
+        else:
+            target_thermostats = devices
+
+        for thermostat in target_thermostats:
+            thermostat.set_thermostat_schedule(day, start, part, enable, label, heating, cooling)
+
+            thermostat.schedule_update_ha_state(True)
+
     hass.services.register(
         DOMAIN,
         SERVICE_RESUME_PROGRAM,
@@ -254,6 +306,13 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
         SERVICE_SET_NIGHT_MODE,
         set_night_mode_service,
         schema=NIGHT_MODE_SCHEMA,
+    )
+
+    hass.services.register(
+        DOMAIN,
+        SERVICE_SET_THERMOSTAT_SCHEDULE,
+        set_thermostat_schedule_service,
+        schema=THERMOSTAT_SCHEDULE_SCHEMA,
     )
 
 class Thermostat(ClimateEntity):
@@ -455,7 +514,7 @@ class Thermostat(ClimateEntity):
 
         elif preset_mode == PRESET_MANUAL:
             self.data.daikinskyport.set_away(self.thermostat_index, False)
-            self.data.daikinskyport.set_permanent_hold(self.thermostat_index, False)
+            self.data.daikinskyport.set_permanent_hold(self.thermostat_index)
             
         elif preset_mode == PRESET_TEMP_HOLD:
             self.data.daikinskyport.set_away(self.thermostat_index, False)
@@ -522,7 +581,7 @@ class Thermostat(ClimateEntity):
             self._fan_mode = fan_mode
             self.update_without_throttle = True
 
-            _LOGGER.info("Setting fan mode to: %s", fan_mode)
+            _LOGGER.debug("Setting fan mode to: %s", fan_mode)
         elif fan_mode in {FAN_LOW, FAN_MEDIUM, FAN_HIGH}:
             # Start the fan if it's off.  
             if self._fan_mode == FAN_AUTO:
@@ -533,7 +592,7 @@ class Thermostat(ClimateEntity):
                 
                 self._fan_mode = fan_mode
 
-                _LOGGER.info("Setting fan mode to: %s", fan_mode)
+                _LOGGER.debug("Setting fan mode to: %s", fan_mode)
 
             self.data.daikinskyport.set_fan_speed(
                 self.thermostat_index,
@@ -543,7 +602,7 @@ class Thermostat(ClimateEntity):
             self._fan_speed = FAN_TO_DAIKIN_FAN[fan_mode]
             self.update_without_throttle = True
 
-            _LOGGER.info("Setting fan speed to: %s", self._fan_speed)
+            _LOGGER.debug("Setting fan speed to: %s", self._fan_speed)
         else:
             error = "Invalid fan_mode value:  Valid values are 'on' or 'auto'"
             _LOGGER.error(error)
@@ -628,6 +687,34 @@ class Thermostat(ClimateEntity):
             enable = self.thermostat["nightModeEnabled"]
         self.data.daikinskyport.set_night_mode(
             self.thermostat_index, start, stop, enable
+        )
+        self.update_without_throttle = True
+
+    def set_thermostat_schedule(self, day=None, start=None, part=None, enable=None, label=None, heating=None, cooling=None):
+        """Set the thermostat schedule."""
+        if day is None:
+            now = datetime.now()
+            day = now.strftime("%a")
+        else:
+            day = day[0:3].capitalize()
+            if day not in WEEKDAY:
+                _LOGGER.error("Invalid weekday: %s", day)
+                return None
+        if part is None:
+            part = 1
+        prefix = "sched" + day + "Part" + str(part)
+        if start is None:
+            start = self.thermostat[prefix + "Time"]
+        if enable is None:
+            enable = self.thermostat[prefix + "Enabled"]
+        if label is None:
+            label = self.thermostat[prefix + "Label"]
+        if heating is None:
+            heating = self.thermostat[prefix + "hsp"]
+        if cooling is None:
+            cooling = self.thermostat[prefix + "csp"]
+        self.data.daikinskyport.set_thermostat_schedule(
+            self.thermostat_index, prefix, start, enable, label, heating, cooling
         )
         self.update_without_throttle = True
 

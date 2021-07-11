@@ -39,3 +39,31 @@ daikin_set_night_mode:
     enable:
       description: Enable/Disable night mode.  True = enabled
       example: True
+daikin_set_thermostat_schedule:
+  description: >-
+    Configure the thermostat schedule
+  fields:
+    entity_id:
+      description: thermostat on which to set the schedule.
+      example: "climate.kitchen"
+    day:
+      description: which day of the week to modify. Defaults to the current day of the week
+      example: "Mon"
+    part:
+      description: which part of the day in the schedule to modify (1-6). Defaults to 1
+      example: "2"
+    start_time:
+      description: when to start this part of the schedule. It is an integer value where every 15 minutes from 00:00 is 1 (each hour = 4). Defaults to previous setting.
+      example: "92"
+    enable:
+      description: Boolean to enable (True) or disable (False) this part of the schedule. Defaults to previous setting
+      example: "True"
+    label:
+      description: a name for the part of the schedule. Defaults to previous setting
+      example: "work"
+    heat_temp_setpoint:
+      description: temperature to turn the heat on. Defaults to previous setting
+      example: "65"
+    cool_temp_setpoint:
+      description: temperature to turn the air conditioning on at. Defaults to previous setting
+      example: "75"

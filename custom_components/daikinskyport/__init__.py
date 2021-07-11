@@ -1,5 +1,4 @@
 """Daikin Skyport integration."""
-import logging
 import os
 from datetime import timedelta
 

@@ -141,7 +141,7 @@ class DaikinSkyport(object):
             return self.thermostats
         else:
             self.authenticated = False
-            logger.info("Error connecting to Daikin Skyport while attempting to get "
+            logger.debug("Error connecting to Daikin Skyport while attempting to get "
                         "thermostat data.  Refreshing tokens and trying again.")
             if self.refresh_tokens():
                 return self.get_thermostats()
@@ -163,7 +163,7 @@ class DaikinSkyport(object):
             return request.json()
         else:
             self.authenticated = False
-            logger.info("Error connecting to Daikin Skyport while attempting to get "
+            logger.debug("Error connecting to Daikin Skyport while attempting to get "
                         "thermostat data.  Refreshing tokens and trying again.")
             if self.refresh_tokens():
                 return self.get_thermostat_info(deviceid)
@@ -212,7 +212,7 @@ class DaikinSkyport(object):
         url = 'https://api.daikinskyport.com/deviceData/' + deviceID
         header = {'Content-Type': 'application/json;charset=UTF-8',
                   'Authorization': 'Bearer ' + self.access_token}
-        logger.info("Make Request: Device: %s, Body: %s", deviceID, body)
+        logger.debug("Make Request: Device: %s, Body: %s", deviceID, body)
         try:
             request = requests.put(url, headers=header, json=body)
         except RequestException:
@@ -237,16 +237,22 @@ class DaikinSkyport(object):
         log_msg_action = "set HVAC mode"
         return self.make_request(index, body, log_msg_action)
 
-    def set_fan_schedule(self, start_time, end_time, duration):
-        ''' Schedule to run the fan.  
-        start_time is the beginning of the schedule per day.  It is an integer value where every 15 minutes from 00:00 is 1 (each hour = 4)
-        end_time is the end of the schedule each day.  Values are same as start_time
-        duration is the run time per hour of the schedule. Options are on the full time (0), 5mins (1), 15mins (2), 30mins (3), and 45mins (4) '''
-        body = {"fanCirculateDuration": duration,
-                "fanCirculateStart": start_time,
-                "fanCirculateStop": end_time
+    def set_thermostat_schedule(self, index, prefix, start, enable, label, heating, cooling):
+        ''' Schedule to set the thermostat.
+        prefix is the beginning of the JSON key to modify.  It consists of "sched" + [Mon,Tue,Wed,Thu,Fri,Sat,Sun] + "Part" + [1:6] (ex. schedMonPart1)
+        start is the beginning of the schedule.  It is an integer value where every 15 minutes from 00:00 is 1 (each hour = 4)
+        enable is a boolean to set whether the schedule part is active or not
+        label is a name for the part (ex. wakeup, work, etc.)
+        heating is the heating set point for the part
+        cooling is the cooling set point for the part'''
+        body = {prefix + "Time": start,
+                prefix + "Enabled": enable,
+                prefix + "Label": label,
+                prefix + "hsp": heating,
+                prefix + "csp": cooling
                 }
-        log_msg_action = "set fan minimum on time."
+
+        log_msg_action = "set thermostat schedule"
         return self.make_request(index, body, log_msg_action)
 
     def set_fan_mode(self, index, fan_mode):
@@ -295,7 +301,7 @@ class DaikinSkyport(object):
             heat_temp = self.thermostats[index]["hspHome"]
         body = {"hspHome": round(heat_temp, 1),
                 "cspHome": round(cool_temp, 1),
-                "schedOverride": 1,
+                "schedOverride": 0,
                 "schedEnabled": False
                 }
         log_msg_action = "set permanent hold"
@@ -326,7 +332,11 @@ class DaikinSkyport(object):
         return self.make_request(index, body, log_msg_action)
 
     def set_fan_schedule(self, index, start, stop, interval, speed):
-        ''' Set the fan schedule parameters '''
+        ''' Schedule to run the fan.  
+        start_time is the beginning of the schedule per day.  It is an integer value where every 15 minutes from 00:00 is 1 (each hour = 4)
+        end_time is the end of the schedule each day.  Values are same as start_time
+        interval is the run time per hour of the schedule. Options are on the full time (0), 5mins (1), 15mins (2), 30mins (3), and 45mins (4) 
+        speed is low (0) medium (1) or high (2)'''
         body = {"fanCirculateStart": start,
                 "fanCirculateStop": stop,
                 "fanCirculateDuration": interval,
