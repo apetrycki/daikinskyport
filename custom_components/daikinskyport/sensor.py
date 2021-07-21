@@ -18,6 +18,9 @@ DEVICE_CLASS_CARBON_DIOXIDE = "CO2"
 DEVICE_CLASS_VOLATILE_ORGANIC_COMPOUNDS = "VOC"
 DEVICE_CLASS_OZONE = "ozone"
 DEVICE_CLASS_SCORE = "score"
+DEVICE_CLASS_DEMAND = "demand"
+DEVICE_CLASS_POWER = "power"
+DEVICE_CLASS_FREQ_PERCENT = "frequency in percent"
 
 SENSOR_TYPES = {
     "temperature": {
@@ -65,6 +68,21 @@ SENSOR_TYPES = {
         "unit_of_measurement": "%",
         "icon": "mdi:percent",
     },
+    "demand": {
+        "device_class": DEVICE_CLASS_DEMAND,
+        "unit_of_measurement": "%",
+        "icon": "mdi:percent",
+    },
+    "power": {
+        "device_class": DEVICE_CLASS_POWER,
+        "unit_of_measurement": "W",
+        "icon": "mdi:power-plug",
+    },
+    "frequency_percent": {
+        "device_class": DEVICE_CLASS_FREQ_PERCENT,
+        "unit_of_measurement": "%",
+        "icon": "mdi:percent",
+    },
 }
 
 
@@ -76,7 +94,9 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     dev = list()
     for index in range(len(data.daikinskyport.thermostats)):
         for sensor in data.daikinskyport.get_sensors(index):
-            if sensor["type"] not in ("temperature", "humidity", "score", "ozone", "particle", "VOC"):
+            if sensor["type"] not in ("temperature", "humidity", "score",
+                                      "ozone", "particle", "VOC", "demand",
+                                      "power", "frequency_percent"):
                 continue
                 
             dev.append(DaikinSkyportSensor(data, sensor["name"], sensor["type"], index))
