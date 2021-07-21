@@ -116,6 +116,9 @@ hum = humidity/humidifier
 How times work:
 They decided to be weird with how times work. Basically every 1=15mins. So midnight (00:00) is 0, 00:15=1, 08:00=8x4=32, etc.
 
+How percentages work:
+Percentage numbers range from 0-200.  This provides a 0.5% increment.  To get a proper percent, just divide the value by 2.
+
 To set configuration:
 ```
 curl --location --request PUT "https://api.daikinskyport.com/deviceData/<device UUID>" \
@@ -175,7 +178,7 @@ Sensors:
 “weatherDay[n]Icon”: tstorms, partlycloudy, (these are all I have right now)
 “weatherDay[n]Cond”: text description of conditions
 “weatherDay[n]Hum”: humidity forecast
-“ctAHFanCurrentDemandStatus”: looks like a % (x/255*100), current fan demand
+“ctAHFanCurrentDemandStatus”: is a % in 0.5% steps (eg. divide by 2 to get percent), current fan demand
 “ctAHFanRequestedDemand”: looks like a %, the requested fan demand by thermostat
 "ctOutdoorDeHumidificationRequestedDemand": looks like a %, requested dehumidification.  when this starts, cooling demand stops
 “ctAHCurrentIndoorAirflow”: maybe CFM?, current airflow
