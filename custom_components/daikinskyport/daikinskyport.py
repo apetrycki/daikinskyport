@@ -6,6 +6,8 @@ import logging
 
 from requests.exceptions import RequestException
 
+from .const import DAIKIN_PERCENT_MULTIPLIER
+
 logger = logging.getLogger('daikinskyport')
 
 NEXT_SCHEDULE = 1
@@ -179,17 +181,17 @@ class DaikinSkyport(object):
         sensors = list()
         sensors.append({"name": self.thermostats[index]['name'] + " Outdoor", "value": self.thermostats[index]['tempOutdoor'], "type": "temperature"})
         sensors.append({"name": self.thermostats[index]['name'] + " Outdoor", "value": self.thermostats[index]['humOutdoor'], "type": "humidity"})
-        sensors.append({"name": self.thermostats[index]['name'] + " Outdoor fan", "value": self.thermostats[index]['ctOutdoorFanRequestedDemandPercentage'], "type": "demand"})
-        sensors.append({"name": self.thermostats[index]['name'] + " Outdoor cooling", "value": self.thermostats[index]['ctOutdoorCoolRequestedDemand'], "type": "demand"})
+        sensors.append({"name": self.thermostats[index]['name'] + " Outdoor fan", "value": round(self.thermostats[index]['ctOutdoorFanRequestedDemandPercentage'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "demand"})
+        sensors.append({"name": self.thermostats[index]['name'] + " Outdoor cooling", "value": round(self.thermostats[index]['ctOutdoorCoolRequestedDemand'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "demand"})
         sensors.append({"name": self.thermostats[index]['name'] + " Outdoor", "value": self.thermostats[index]['ctOutdoorPower'], "type": "power"})
-        sensors.append({"name": self.thermostats[index]['name'] + " Outdoor", "value": self.thermostats[index]['ctOutdoorFrequencyInPercent'], "type": "frequency_percent"})
+        sensors.append({"name": self.thermostats[index]['name'] + " Outdoor", "value": round(self.thermostats[index]['ctOutdoorFrequencyInPercent'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "frequency_percent"})
         sensors.append({"name": self.thermostats[index]['name'] + " Indoor", "value": self.thermostats[index]['tempIndoor'], "type": "temperature"})
         sensors.append({"name": self.thermostats[index]['name'] + " Indoor", "value": self.thermostats[index]['humIndoor'], "type": "humidity"})
-        sensors.append({"name": self.thermostats[index]['name'] + " Indoor fan", "value": self.thermostats[index]['ctIFCFanRequestedDemandPercent'], "type": "demand"})
-        sensors.append({"name": self.thermostats[index]['name'] + " Indoor cooling", "value": self.thermostats[index]['ctIFCCoolRequestedDemandPercent'], "type": "demand"})
-        sensors.append({"name": self.thermostats[index]['name'] + " Indoor heating", "value": self.thermostats[index]['ctIFCHeatRequestedDemandPercent'], "type": "demand"})
-        sensors.append({"name": self.thermostats[index]['name'] + " Indoor humidifier", "value": self.thermostats[index]['ctIFCHumRequestedDemandPercent'], "type": "demand"})
-        sensors.append({"name": self.thermostats[index]['name'] + " Indoor dehumidifier", "value": self.thermostats[index]['ctIFCDehumRequestedDemandPercent'], "type": "demand"})
+        sensors.append({"name": self.thermostats[index]['name'] + " Indoor fan", "value": round(self.thermostats[index]['ctIFCFanRequestedDemandPercent'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "demand"})
+        sensors.append({"name": self.thermostats[index]['name'] + " Indoor cooling", "value": round(self.thermostats[index]['ctIFCCoolRequestedDemandPercent'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "demand"})
+        sensors.append({"name": self.thermostats[index]['name'] + " Indoor heating", "value": round(self.thermostats[index]['ctIFCHeatRequestedDemandPercent'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "demand"})
+        sensors.append({"name": self.thermostats[index]['name'] + " Indoor humidifier", "value": round(self.thermostats[index]['ctIFCHumRequestedDemandPercent'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "demand"})
+        sensors.append({"name": self.thermostats[index]['name'] + " Indoor dehumidifier", "value": round(self.thermostats[index]['ctIFCDehumRequestedDemandPercent'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "demand"})
         sensors.append({"name": self.thermostats[index]['name'] + " Indoor", "value": self.thermostats[index]['ctIndoorPower'], "type": "power"})
         if self.thermostats[index]['aqOutdoorAvailable']:
             sensors.append({"name": self.thermostats[index]['name'] + " Outdoor", "value": self.thermostats[index]['aqOutdoorParticles'], "type": "particle"})
