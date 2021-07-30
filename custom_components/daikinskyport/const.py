@@ -43,3 +43,7 @@ DAIKIN_WEATHER_SYMBOL_TO_HASS = {
     21: "hazy",
     -2: None,
 }
+
+# The multiplier applied by the API to percentage values.
+DAIKIN_PERCENT_MULTIPLIER = 2
+
