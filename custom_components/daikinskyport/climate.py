@@ -374,7 +374,7 @@ class Thermostat(ClimateEntity):
             self._preset_mode = PRESET_MANUAL
 
         self._operation_list = []
-        if self.thermostat["ctSystemCapEmergencyHeat"] or (self.thermostat["ctOutdoorNoofHeatStages"] > 0):
+        if self.thermostat["ctSystemCapHeat"]:
             self._operation_list.append(HVAC_MODE_HEAT)
         if (self.thermostat["ctOutdoorNoofCoolStages"] > 0):
             self._operation_list.append(HVAC_MODE_COOL)
