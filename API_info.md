@@ -243,6 +243,15 @@ Determining unit capabilities:
 "ctOutdoorNoofHeatStages": number of heating stages, integer
 "ctSystemCapEmergencyHeat": true if heating element is installed
 "modeEmHeatAvailable":true if Emergency Heat mode is enabled,
+"ctSystemCapCompressorHeat": true if heatpump?, else fallse
+"ctSystemCapCool": true if A/C is available, else false
+"ctSystemCapDehumidification": true if dehumidification is available, else false
+"ctSystemCapElectricHeat": true if electric heating element is installed, else false
+"ctSystemCapEmergencyHeat": true if electric element is installed along with heatpump or gas?
+"ctSystemCapGasHeat": true if gas heat is available, else false
+"ctSystemCapHeat": true if system provides any heat, else false
+"ctSystemCapHumidification": true if system provides humidity control, else false
+"ctSystemCapVentilation": true if system provides exterior ventilation, else false
 ```
 
 TJCoffey has also been working on deciphering the Daikin API info and has some more updated information on thermostat parameters:
