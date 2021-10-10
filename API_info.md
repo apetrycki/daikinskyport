@@ -181,6 +181,12 @@ Sensors:
 “ctAHFanCurrentDemandStatus”: is a % in 0.5% steps (eg. divide by 2 to get percent), current fan demand
 “ctAHFanRequestedDemand”: looks like a %, the requested fan demand by thermostat
 "ctOutdoorDeHumidificationRequestedDemand": looks like a %, requested dehumidification.  when this starts, cooling demand stops
+"ctIFCFanRequestedDemandPercent": a % in 0.5% steps; the requested fan demand (responds to fan circulate switch being on, and fan turned on via thermostat)
+"ctIFCHeatRequestedDemandPercent": a % in 0.5% steps; the requested furance demand
+"ctIFCCoolRequestedDemandPercent": a % in 0.5% steps; the requested air conditioning demand
+"ctIFCCurrentFanActualStatus": a % in 0.5% steps; the actual fan demand (responds to fan circulate switch being on, fan turned on via thermostat, and furnace running)
+"ctIFCCurrentHeatActualStatus": a % in 0.5% steps; the actual furnace status
+"ctIFCCurrentCoolActualStatus": a % in 0.5% steps; the actual air conditioner status
 “ctAHCurrentIndoorAirflow”: maybe CFM?, current airflow
 "aq[In/Out]doorAvailable": true if sensor is available (outdoor is internet info)
 "aq[In/Out]doorLevel": assuming this is an enum, 1=acceptable, others TBD
