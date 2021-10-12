@@ -21,6 +21,7 @@ DEVICE_CLASS_SCORE = "score"
 DEVICE_CLASS_DEMAND = "demand"
 DEVICE_CLASS_POWER = "power"
 DEVICE_CLASS_FREQ_PERCENT = "frequency in percent"
+DEVICE_CLASS_ACTUAL_STATUS = "actual"
 
 SENSOR_TYPES = {
     "temperature": {
@@ -83,6 +84,11 @@ SENSOR_TYPES = {
         "unit_of_measurement": "%",
         "icon": "mdi:percent",
     },
+    "actual_status": {
+        "device_class": DEVICE_CLASS_ACTUAL_STATUS,
+        "unit_of_measurement": "%",
+        "icon": "mdi:percent",
+    },
 }
 
 
@@ -96,7 +102,8 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
         for sensor in data.daikinskyport.get_sensors(index):
             if sensor["type"] not in ("temperature", "humidity", "score",
                                       "ozone", "particle", "VOC", "demand",
-                                      "power", "frequency_percent"):
+                                      "power", "frequency_percent",
+                                      "actual_status"):
                 continue
                 
             dev.append(DaikinSkyportSensor(data, sensor["name"], sensor["type"], index))
