@@ -1,8 +1,10 @@
+""" Constants for Daikin Skyport Integration"""
+from typing import Final
 import logging
 
 _LOGGER = logging.getLogger(__package__)
 
-DOMAIN = "daikinskyport"
+DOMAIN: Final = "daikinskyport"
 
 from homeassistant.components.weather import (
     ATTR_CONDITION_CLOUDY,
@@ -46,4 +48,3 @@ DAIKIN_WEATHER_SYMBOL_TO_HASS = {
 
 # The multiplier applied by the API to percentage values.
 DAIKIN_PERCENT_MULTIPLIER = 2
-

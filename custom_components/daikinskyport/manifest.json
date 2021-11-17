@@ -3,9 +3,10 @@
   "name": "Daikin Skyport",
   "documentation": "https://github.com/apetrycki/daikinskyport",
   "issue_tracker": "https://github.com/apetrycki/daikinskyport/issues",
-  "config_flow": false,
+  "config_flow": true,
   "requirements": [],
-  "dependencies": ["configurator"],
+  "dependencies": [],
   "codeowners": ["@apetrycki"],
-  "version": "0.1.0"
+  "version": "0.1.0",
+  "iot_class": "cloud_polling"
 }
