@@ -512,7 +512,7 @@ class Thermostat(ClimateEntity):
         return DAIKIN_HVAC_ACTION_TO_HASS[self.thermostat["equipmentStatus"]]
 
     @property
-    def device_state_attributes(self):
+    def extra_state_attributes(self):
         """Return device specific state attributes."""
         status = self.thermostat["equipmentStatus"]
         return {
