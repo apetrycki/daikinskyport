@@ -46,6 +46,11 @@ import homeassistant.helpers.config_validation as cv
 from .const import (
     _LOGGER,
     DOMAIN,
+    DAIKIN_HVAC_MODE_OFF,
+    DAIKIN_HVAC_MODE_HEAT,
+    DAIKIN_HVAC_MODE_COOL,
+    DAIKIN_HVAC_MODE_AUTO,
+    DAIKIN_HVAC_MODE_AUXHEAT,
 )
 
 WEEKDAY = [ "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -92,11 +97,11 @@ ATTR_ONECLEAN_ENABLED = "enable"
 # Order matters, because for reverse mapping we don't want to map HEAT to AUX
 DAIKIN_HVAC_TO_HASS = collections.OrderedDict(
     [
-        (1, HVAC_MODE_HEAT),
-        (2, HVAC_MODE_COOL),
-        (3, HVAC_MODE_AUTO),
-        (0, HVAC_MODE_OFF),
-        (4, HVAC_MODE_HEAT),
+        (DAIKIN_HVAC_MODE_HEAT, HVAC_MODE_HEAT),
+        (DAIKIN_HVAC_MODE_COOL, HVAC_MODE_COOL),
+        (DAIKIN_HVAC_MODE_AUTO, HVAC_MODE_AUTO),
+        (DAIKIN_HVAC_MODE_OFF, HVAC_MODE_OFF),
+        (DAIKIN_HVAC_MODE_AUXHEAT, HVAC_MODE_HEAT),
     ]
 )
 
@@ -533,7 +538,23 @@ class Thermostat(ClimateEntity):
     @property
     def is_aux_heat(self):
         """Return true if aux heater."""
-        return False #TBD: Need to figure out how to determine if aux heat is running
+        return self.thermostat["mode"] == DAIKIN_HVAC_MODE_AUXHEAT
+
+    def turn_aux_heat_on(self):
+        """Turn emergency heat on"""
+        self.data.daikinskyport.set_hvac_mode(self.thermostat_index, DAIKIN_HVAC_MODE_AUXHEAT)
+        self.update_without_throttle = True
+
+    def turn_aux_heat_off(self):
+        """Turn emergency heat off"""
+        daikin_value = next(
+            (k for k, v in DAIKIN_HVAC_TO_HASS.items() if v == self._hvac_mode), None
+        )
+        if daikin_value is None:
+            _LOGGER.error("Invalid mode for set_hvac_mode: %s", self._hvac_mode)
+            return
+        self.data.daikinskyport.set_hvac_mode(self.thermostat_index, daikin_value)
+        self.update_without_throttle = True
 
     def set_preset_mode(self, preset_mode):
         """Activate a preset."""
