@@ -23,7 +23,7 @@ CONF_HOLD_TEMP = "hold_temp"
 
 DAIKINSKYPORT_CONFIG_FILE = "daikinskyport.conf"
 
-MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=10)
+MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
 
 NETWORK = None
 
