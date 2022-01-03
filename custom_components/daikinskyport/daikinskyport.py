@@ -247,7 +247,7 @@ class DaikinSkyport(object):
             return None
 
     def set_hvac_mode(self, index, hvac_mode):
-        ''' possible hvac modes are auto (3), auxHeatOnly (4), cool (2), heat (1), off (0) '''
+        ''' possible modes are DAIKIN_HVAC_MODE_{OFF,HEAT,COOL,AUTO,AUXHEAT} '''
         body = {"mode": hvac_mode}
         log_msg_action = "set HVAC mode"
         return self.make_request(index, body, log_msg_action)
