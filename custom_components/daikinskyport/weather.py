@@ -44,6 +44,7 @@ class DaikinSkyportWeather(WeatherEntity):
         """Initialize the Daikin Skyport weather platform."""
         self.data = data
         self._name = name
+        self._attr_unique_id = f"{data.daikinskyport.thermostats[index]['id']}-{self._name}"
         self._index = index
         self.weather = None
 
