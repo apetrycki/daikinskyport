@@ -117,7 +117,8 @@ class DaikinSkyportSensor(Entity):
     def __init__(self, data, sensor_name, sensor_type, sensor_index):
         """Initialize the sensor."""
         self.data = data
-        self._name = "{} {}".format(sensor_name, SENSOR_TYPES[sensor_type]["device_class"])
+        self._name = f"{sensor_name} {SENSOR_TYPES[sensor_type]['device_class']}"
+        self._attr_unique_id = f"{data.daikinskyport.thermostats[sensor_index]['id']}-{self._name}"
         self._sensor_name = sensor_name
         self._type = sensor_type
         self._index = sensor_index
