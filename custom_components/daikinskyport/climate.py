@@ -364,6 +364,7 @@ class Thermostat(ClimateEntity):
         self.thermostat_index = thermostat_index
         self.thermostat = self.data.daikinskyport.get_thermostat(self.thermostat_index)
         self._name = self.thermostat["name"]
+        self._attr_unique_id = f"{self.thermostat['id']}-climate"
         self._cool_setpoint = self.thermostat["cspActive"]
         self._heat_setpoint = self.thermostat["hspActive"]
         self._hvac_mode = DAIKIN_HVAC_TO_HASS[self.thermostat["mode"]]
