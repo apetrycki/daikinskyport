@@ -1,8 +1,17 @@
 """Support for Daikin Skyport sensors."""
 from homeassistant.const import (
-    DEVICE_CLASS_HUMIDITY,
-    DEVICE_CLASS_TEMPERATURE,
+    PERCENTAGE,
     TEMP_CELSIUS,
+    CONCENTRATION_PARTS_PER_MILLION,
+    CONCENTRATION_PARTS_PER_BILLION,
+    CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
+    POWER_WATT
+)
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorEntityDescription,
+    SensorStateClass,
 )
 from homeassistant.helpers.entity import Entity
 
@@ -10,83 +19,89 @@ from .const import (
     _LOGGER,
     DOMAIN,
 )
-DAIKINSKYPORT_CONFIG_FILE = "daikinskyport.conf"
 
-DEVICE_CLASS_PM2_5 = "PM2.5"
-DEVICE_CLASS_PM10 = "PM10"
-DEVICE_CLASS_CARBON_DIOXIDE = "CO2"
-DEVICE_CLASS_VOLATILE_ORGANIC_COMPOUNDS = "VOC"
-DEVICE_CLASS_OZONE = "ozone"
 DEVICE_CLASS_SCORE = "score"
 DEVICE_CLASS_DEMAND = "demand"
-DEVICE_CLASS_POWER = "power"
 DEVICE_CLASS_FREQ_PERCENT = "frequency in percent"
 DEVICE_CLASS_ACTUAL_STATUS = "actual"
 
 SENSOR_TYPES = {
     "temperature": {
-        "device_class": DEVICE_CLASS_TEMPERATURE,
-        "unit_of_measurement": TEMP_CELSIUS,
+        "device_class": SensorDeviceClass.TEMPERATURE,
+        "native_unit_of_measurement": TEMP_CELSIUS,
+        "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:thermometer",
     },
     "humidity": {
-        "device_class": DEVICE_CLASS_HUMIDITY,
-        "unit_of_measurement": "%",
+        "device_class": SensorDeviceClass.HUMIDITY,
+        "native_unit_of_measurement": PERCENTAGE,
+        "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:water-percent",
     },
     "CO2": {
-        "device_class": DEVICE_CLASS_CARBON_DIOXIDE,
-        "unit_of_measurement": "ppm",
+        "device_class": SensorDeviceClass.CO2,
+        "native_unit_of_measurement": CONCENTRATION_PARTS_PER_MILLION,
+        "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:periodic-table-co2",
     },
     "VOC": {
-        "device_class": DEVICE_CLASS_VOLATILE_ORGANIC_COMPOUNDS,
-        "unit_of_measurement": "ppb",
+        "device_class": SensorDeviceClass.VOLATILE_ORGANIC_COMPOUNDS,
+        "native_unit_of_measurement": CONCENTRATION_PARTS_PER_BILLION,
+        "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:cloud",
     },
     "ozone": {
-        "device_class": DEVICE_CLASS_OZONE,
-        "unit_of_measurement": "ppb",
+        "device_class": SensorDeviceClass.OZONE,
+        "native_unit_of_measurement": CONCENTRATION_PARTS_PER_BILLION,
+        "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:cloud",
     },
     "particle": {
-        "device_class": DEVICE_CLASS_PM2_5,
-        "unit_of_measurement": "µg/m3",
+        "device_class": SensorDeviceClass.PM1,
+        "native_unit_of_measurement": CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
+        "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:cloud",
     },
     "PM25": {
-        "device_class": DEVICE_CLASS_PM2_5,
-        "unit_of_measurement": "µg/m3",
+        "device_class": SensorDeviceClass.PM25,
+        "native_unit_of_measurement": CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
+        "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:cloud",
     },
     "PM10": {
-        "device_class": DEVICE_CLASS_PM10,
-        "unit_of_measurement": "µg/m3",
+        "device_class": SensorDeviceClass.PM10,
+        "native_unit_of_measurement": CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
+        "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:cloud",
     },
     "score": {
         "device_class": DEVICE_CLASS_SCORE,
-        "unit_of_measurement": "%",
+        "native_unit_of_measurement": PERCENTAGE,
+        "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:percent",
     },
     "demand": {
         "device_class": DEVICE_CLASS_DEMAND,
-        "unit_of_measurement": "%",
+        "native_unit_of_measurement": PERCENTAGE,
+        "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:percent",
     },
     "power": {
-        "device_class": DEVICE_CLASS_POWER,
-        "unit_of_measurement": "W",
+        "device_class": SensorDeviceClass.POWER,
+        "native_unit_of_measurement": POWER_WATT,
+        "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:power-plug",
     },
     "frequency_percent": {
         "device_class": DEVICE_CLASS_FREQ_PERCENT,
-        "unit_of_measurement": "%",
+        "native_unit_of_measurement": PERCENTAGE,
+        "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:percent",
     },
     "actual_status": {
         "device_class": DEVICE_CLASS_ACTUAL_STATUS,
-        "unit_of_measurement": "%",
+        "native_unit_of_measurement": PERCENTAGE,
+        "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:percent",
     },
 }
@@ -111,7 +126,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
     add_entities(dev, True)
 
 
-class DaikinSkyportSensor(Entity):
+class DaikinSkyportSensor(SensorEntity):
     """Representation of a Daikin sensor."""
 
     def __init__(self, data, sensor_name, sensor_type, sensor_index):
@@ -123,7 +138,7 @@ class DaikinSkyportSensor(Entity):
         self._type = sensor_type
         self._index = sensor_index
         self._state = None
-        self._unit_of_measurement = SENSOR_TYPES[sensor_type]["unit_of_measurement"]
+        self._native_unit_of_measurement = SENSOR_TYPES[sensor_type]["native_unit_of_measurement"]
 
     @property
     def name(self):
@@ -143,14 +158,14 @@ class DaikinSkyportSensor(Entity):
         return SENSOR_TYPES[self._type]["icon"]
 
     @property
-    def state(self):
+    def native_value(self):
         """Return the state of the sensor."""
         return self._state
 
     @property
-    def unit_of_measurement(self):
+    def native_unit_of_measurement(self):
         """Return the unit of measurement this sensor expresses itself in."""
-        return self._unit_of_measurement
+        return self._native_unit_of_measurement
 
     def update(self):
         """Get the latest state of the sensor."""
