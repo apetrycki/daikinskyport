@@ -69,7 +69,7 @@ class DaikinSkyportWeather(WeatherEntity):
             return None
 
     @property
-    def temperature(self):
+    def native_temperature(self):
         """Return the temperature."""
         try:
             return float(self.get_forecast("weatherTodayTempC"))
@@ -77,7 +77,7 @@ class DaikinSkyportWeather(WeatherEntity):
             return None
 
     @property
-    def temperature_unit(self):
+    def native_temperature_unit(self):
         """Return the unit of measurement."""
         return TEMP_CELSIUS
 
