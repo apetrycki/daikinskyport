@@ -42,6 +42,12 @@ from homeassistant.const import (
     CONF_EMAIL,
 )
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.core import HomeAssistant
+from homeassistant.config_entries import ConfigEntry
+
+from . import DaikinSkyportData
 
 from .const import (
     _LOGGER,
@@ -208,6 +214,15 @@ SUPPORT_FLAGS = (
     | SUPPORT_FAN_MODE
 )
 
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
+    """Add a Daikin Skyport Climate entity from a config_entry."""
+
+    coordinator: DaikinSkyportData = hass.data[DOMAIN][entry.entry_id]
+
+    for index in range(len(coordinator.daikinskyport.thermostats)):
+        async_add_entities([Thermostat(coordinator)], index)
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the Daikin Skyport Thermostat Platform."""
@@ -355,7 +370,7 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
         schema=ONECLEAN_SCHEMA,
     )
 
-class Thermostat(ClimateEntity):
+class Thermostat(CoordinatorEntity[DaikinSkyportData], ClimateEntity):
     """A thermostat class for Daikin Skyport Thermostats."""
 
     def __init__(self, data, thermostat_index):
