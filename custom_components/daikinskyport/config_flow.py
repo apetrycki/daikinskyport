@@ -26,7 +26,7 @@ class DaikinSkyportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 
             else:
                 await self.async_set_unique_id(
-                    daikinskyport.location_key, raise_on_progress=False #TBD
+                    daikinskyport.email, raise_on_progress=False
                 )
 
                 return self.async_create_entry(
