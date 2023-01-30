@@ -13,10 +13,17 @@ from homeassistant.components.weather import (
 )
 from homeassistant.const import TEMP_CELSIUS
 from homeassistant.util import dt as dt_util
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.core import HomeAssistant
+from homeassistant.config_entries import ConfigEntry
+
 from .const import (
     _LOGGER,
     DOMAIN,
 )
+from . import DaikinSkyportData
+
 ATTR_FORECAST_TEMP_HIGH = "temphigh"
 ATTR_FORECAST_PRESSURE = "pressure"
 ATTR_FORECAST_VISIBILITY = "visibility"
@@ -24,18 +31,16 @@ ATTR_FORECAST_HUMIDITY = "humidity"
 
 MISSING_DATA = -5002
 
-def setup_platform(hass, config, add_entities, discovery_info=None):
-    """Set up the Daikin Skyport weather platform."""
-    if discovery_info is None:
-        return
-    dev = list()
-    data = hass.data[DOMAIN]
-    for index in range(len(data.daikinskyport.thermostats)):
-        thermostat = data.daikinskyport.get_thermostat(index)
-        dev.append(DaikinSkyportWeather(data,thermostat["name"], index))
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
+    """Add a Daikin Skyport Weather entity from a config_entry."""
 
-    add_entities(dev, True)
+    coordinator: DaikinSkyportData = hass.data[DOMAIN][entry.entry_id]
 
+    for index in range(len(coordinator.daikinskyport.thermostats)):
+        thermostat = coordinator.daikinskyport.get_thermostat(index)
+        async_add_entities(DaikinSkyportWeather(coordinator,thermostat["name"], index))
 
 class DaikinSkyportWeather(WeatherEntity):
     """Representation of Daikin Skyport weather data."""
