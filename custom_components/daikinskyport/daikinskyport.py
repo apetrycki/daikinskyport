@@ -61,7 +61,6 @@ class DaikinSkyport(object):
             logger.error("Email missing from config.")
         if 'PASSWORD' in config: # PASSWORD is only needed during first login
             self.user_password = config['PASSWORD']
-        self.config_filename = config_filename
 
         if 'ACCESS_TOKEN' in config:
             self.access_token = config['ACCESS_TOKEN']
@@ -95,7 +94,9 @@ class DaikinSkyport(object):
             if self.refresh_token is None:
                 logger.error("Auth did not return a refresh token.")
             else:
-                self.write_tokens_to_file()
+                if self.file_based_config:
+                    self.write_tokens_to_file()
+                return request.json()
         else:
             logger.warn('Error while requesting tokens from daikinskyport.com.'
                         ' Status code: ' + str(request.status_code))
@@ -111,7 +112,8 @@ class DaikinSkyport(object):
         request = requests.post(url, headers=header, json=data)
         if request.status_code == requests.codes.ok:
             self.access_token = request.json()['accessToken']
-            self.write_tokens_to_file()
+            if self.file_based_config:
+                self.write_tokens_to_file()
             return True
         else:
             self.request_tokens()
