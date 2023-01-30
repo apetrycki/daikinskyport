@@ -1,7 +1,10 @@
 """Daikin Skyport integration."""
 import os
 from datetime import timedelta
+from async_timeout import timeout
 from requests.exceptions import RequestException
+from typing import Any
+from aiohttp import ClientSession
 
 import voluptuous as vol
 
@@ -18,6 +21,9 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util import Throttle
 from homeassistant.util.json import save_json
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.device_registry import DeviceEntryType
+from homeassistant.helpers.entity import DeviceInfo
 
 from .daikinskyport import DaikinSkyport
 from .const import (
@@ -29,6 +35,9 @@ from .const import (
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
 
 NETWORK = None
+
+PLATFORMS = [Platform.SENSOR, Platform.WEATHER, Platform.CLIMATE]
+
 
 CONFIG_SCHEMA = vol.Schema(
     {
@@ -55,7 +64,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     websession = async_get_clientsession(hass)
 
     coordinator = DaikinSkyportData(
-        hass, websession, email, password, name
+        hass, websession, email, password, unique_id, name
     )
     await coordinator.async_config_entry_first_refresh()
 
@@ -101,8 +110,7 @@ class DaikinSkyportData(DataUpdateCoordinator[dict[str, Any]]):
             identifiers={(DOMAIN, unique_id)},
             manufacturer=MANUFACTURER,
             name=name,
-            ),
-        )
+            )
         
         super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=MIN_TIME_BETWEEN_UPDATES)
 
@@ -116,4 +124,4 @@ class DaikinSkyportData(DataUpdateCoordinator[dict[str, Any]]):
         ) as error:
             raise UpdateFailed(error) from error
         _LOGGER.debug("Daikin Skyport data updated successfully")
-        return **current
+        return
