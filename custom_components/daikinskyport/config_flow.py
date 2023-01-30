@@ -17,14 +17,12 @@ class DaikinSkyportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         await self.async_set_unique_id(device_unique_id)
         self._abort_if_unique_id_configured()
         if user_input is not None:
-            websession = async_get_clientsession(self.hass)
             try:
               async with timeout(10):
-                daikinskyport = DaikinSkyport(
-                  user_input[CONF_USERNAME],
-                  websession,
-                  user_input[CONF_PASSWORD],
-                )
+                daikinskyport = DaikinSkyport({
+                  'EMAIL': user_input[CONF_EMAIL],
+                  'PASSWORD': user_input[CONF_PASSWORD],
+                })
                 
             else:
                 await self.async_set_unique_id(
@@ -39,7 +37,7 @@ class DaikinSkyportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="user", 
             data_schema=vol.Schema(
               {
-                vol.Required(CONF_USERNAME): str,
+                vol.Required(CONF_EMAIL): str,
                 vol.Required(CONF_PASSWORD): str,
                 vol.Optional(CONF_NAME, default="Daikin"): str,
               }
