@@ -3,6 +3,7 @@ import logging
 _LOGGER = logging.getLogger(__package__)
 
 DOMAIN = "daikinskyport"
+MANUFACTURER = "Daikin"
 
 from homeassistant.components.weather import (
     ATTR_CONDITION_CLOUDY,
