@@ -14,6 +14,11 @@ from homeassistant.components.sensor import (
     SensorStateClass,
 )
 from homeassistant.helpers.entity import Entity
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.core import HomeAssistant
+from homeassistant.config_entries import ConfigEntry
+from . import DaikinSkyportData
 
 from .const import (
     _LOGGER,
@@ -106,6 +111,22 @@ SENSOR_TYPES = {
     },
 }
 
+
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
+    """Add a Daikin Skyport Sensor entity from a config_entry."""
+
+    coordinator: DaikinSkyportData = hass.data[DOMAIN][entry.entry_id]
+
+    for index in range(len(coordinator.daikinskyport.thermostats)):
+        for sensor in coordinator.daikinskyport.get_sensors(index):
+            if sensor["type"] not in ("temperature", "humidity", "score",
+                                      "ozone", "particle", "VOC", "demand",
+                                      "power", "frequency_percent",
+                                      "actual_status"):
+                continue
+        async_add_entities(DaikinSkyportSensor(coordinator, sensor["name"], sensor["type"], index))
 
 def setup_platform(hass, config, add_entities, discovery_info=None):
     """Set up the Daikin Skyport sensors."""
