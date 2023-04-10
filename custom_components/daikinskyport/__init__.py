@@ -11,7 +11,7 @@ from homeassistant.const import (
     CONF_EMAIL,
 )
 from homeassistant.util import Throttle
-from homeassistant.util.json import save_json
+from homeassistant.helpers.json import save_json
 
 from .daikinskyport import DaikinSkyport
 from .const import (
