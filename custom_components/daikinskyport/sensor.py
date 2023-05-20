@@ -52,7 +52,7 @@ SENSOR_TYPES = {
     },
     "ozone": {
         "device_class": SensorDeviceClass.OZONE,
-        "native_unit_of_measurement": CONCENTRATION_PARTS_PER_BILLION,
+        "native_unit_of_measurement": CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
         "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:cloud",
     },
