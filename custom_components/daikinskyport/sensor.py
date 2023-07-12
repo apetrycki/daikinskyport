@@ -20,7 +20,6 @@ from .const import (
     DOMAIN,
 )
 
-DEVICE_CLASS_SCORE = "score"
 DEVICE_CLASS_DEMAND = "demand"
 DEVICE_CLASS_FREQ_PERCENT = "frequency in percent"
 DEVICE_CLASS_ACTUAL_STATUS = "actual"
@@ -75,10 +74,10 @@ SENSOR_TYPES = {
         "icon": "mdi:cloud",
     },
     "score": {
-        "device_class": DEVICE_CLASS_SCORE,
-        "native_unit_of_measurement": PERCENTAGE,
+        "device_class": SensorDeviceClass.AQI,
+        "native_unit_of_measurement": None,
         "state_class": SensorStateClass.MEASUREMENT,
-        "icon": "mdi:percent",
+        "icon": "mdi:cloud",
     },
     "demand": {
         "device_class": DEVICE_CLASS_DEMAND,
