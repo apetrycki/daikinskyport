@@ -205,7 +205,7 @@ class DaikinSkyport(object):
         if self.thermostats[index]['aqOutdoorAvailable']:
             sensors.append({"name": f"{name} Outdoor", "value": thermostat['aqOutdoorParticles'], "type": "particle"})
             sensors.append({"name": f"{name} Outdoor", "value": thermostat['aqOutdoorValue'], "type": "score"})
-            sensors.append({"name": f"{name} Outdoor", "value": thermostat['aqOutdoorOzone'], "type": "ozone"})
+            sensors.append({"name": f"{name} Outdoor", "value": round(thermostat['aqOutdoorOzone'] * 1.96), "type": "ozone"})
         if self.thermostats[index]['aqIndoorAvailable']:
             sensors.append({"name": f"{name} Indoor", "value": thermostat['aqIndoorParticlesValue'], "type": "particle"})
             sensors.append({"name": f"{name} Indoor", "value": thermostat['aqIndoorValue'], "type": "score"})
