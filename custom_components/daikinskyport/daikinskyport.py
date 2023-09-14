@@ -61,7 +61,6 @@ class DaikinSkyport(object):
             logger.error("Email missing from config.")
         if 'PASSWORD' in config: # PASSWORD is only needed during first login
             self.user_password = config['PASSWORD']
-        self.config_filename = config_filename
 
         if 'ACCESS_TOKEN' in config:
             self.access_token = config['ACCESS_TOKEN']
@@ -85,9 +84,9 @@ class DaikinSkyport(object):
         data = {"email": self.user_email, "password": self.user_password}
         try:
             request = requests.post(url, headers=header, json=data)
-        except RequestException:
+        except RequestException as e:
             logger.warn("Error connecting to Daikin Skyport.  Possible connectivity outage."
-                        "Could not request token.")
+                        "Could not request token. %s", e)
             return
         if request.status_code == requests.codes.ok:
             self.access_token = request.json()['accessToken']
@@ -95,7 +94,9 @@ class DaikinSkyport(object):
             if self.refresh_token is None:
                 logger.error("Auth did not return a refresh token.")
             else:
-                self.write_tokens_to_file()
+                if self.file_based_config:
+                    self.write_tokens_to_file()
+                return request.json()
         else:
             logger.warn('Error while requesting tokens from daikinskyport.com.'
                         ' Status code: ' + str(request.status_code))
@@ -111,10 +112,12 @@ class DaikinSkyport(object):
         request = requests.post(url, headers=header, json=data)
         if request.status_code == requests.codes.ok:
             self.access_token = request.json()['accessToken']
-            self.write_tokens_to_file()
+            if self.file_based_config:
+                self.write_tokens_to_file()
             return True
         else:
-            self.request_tokens()
+#            self.request_tokens()
+            return False
 
     def get_thermostats(self):
         ''' Set self.thermostats to a json list of thermostats from daikinskyport.com '''
@@ -221,9 +224,9 @@ class DaikinSkyport(object):
         else:
             self.config = config
 
-    def update(self):
+    async def update(self):
         ''' Get new thermostat data from daikin skyport '''
-        self.get_thermostats()
+        return self.get_thermostats()
 
     def make_request(self, index, body, log_msg_action, *, retry_count=0):
         deviceID = self.thermostats[index]['id']
