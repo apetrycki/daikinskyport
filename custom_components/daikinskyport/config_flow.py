@@ -3,13 +3,13 @@ from __future__ import annotations
 import asyncio
 from typing import Any
 from requests.exceptions import RequestException
+from homeassistant.helpers.aiohttp_client import async_create_clientsession
 from async_timeout import timeout
 from homeassistant import config_entries
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, CONF_NAME
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import callback
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.schema_config_entry_flow import (
     SchemaFlowFormStep,
     SchemaOptionsFlowHandler,
@@ -36,11 +36,12 @@ class DaikinSkyportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._abort_if_unique_id_configured()
         if user_input is not None:
             try:
-              async with timeout(10):
+                session = async_create_clientsession(self.hass)
                 daikinskyport = DaikinSkyport(config={
                   'EMAIL': user_input[CONF_EMAIL],
                   'PASSWORD': user_input[CONF_PASSWORD],
-                })
+                }, session=session)
+                result = await daikinskyport.update()
             except RequestException:
                 errors["base"] = "cannot_connect"
             else:

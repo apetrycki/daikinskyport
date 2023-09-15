@@ -1,0 +1,26 @@
+{
+    "config": {
+        "title": "Daikin Skyport",
+        "step": {
+            "user": {
+                "title": "Daikin Skyport",
+                "description": "If you need help with the configuration have a look here: https://github.com/apetrycki/daikinskyport",
+                "data": {
+                    "name": "Name",
+                    "email": "Email",
+                    "password": "Password"
+                }
+            }
+        },
+        "error": {
+            "failure": "An error ocurred, please check the logs",
+            "auth": "Username/Password is wrong.",
+            "name_exists": "Configuration already exists.",
+            "invalid_username": "Invalid Email",
+            "invalid_password": "Invalid Password"
+        },
+        "abort": {
+            "single_instance_allowed": "Only a single configuration of Daikin Skyport is allowed."
+        }
+    }
+}

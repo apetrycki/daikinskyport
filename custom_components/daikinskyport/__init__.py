@@ -38,21 +38,12 @@ NETWORK = None
 
 PLATFORMS = [Platform.SENSOR, Platform.WEATHER, Platform.CLIMATE]
 
-
-CONFIG_SCHEMA = vol.Schema(
-    {
-        DOMAIN: vol.Schema(
-            {
-                vol.Optional(CONF_EMAIL): cv.string,
-                vol.Optional(CONF_PASSWORD): cv.string,
-            }
-        )
-    },
-    extra=vol.ALLOW_EXTRA,
-)
-
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up DaikinSkyport as config entry."""
+    if hass.data.get(DOMAIN) is None:
+        hass.data.setdefault(DOMAIN, {})
+        _LOGGER.info("Daikin Skyport Starting")
+
     email: str = entry.data[CONF_EMAIL]
     password: str = entry.data[CONF_PASSWORD]
     name: str = entry.data[CONF_NAME]
@@ -66,13 +57,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = DaikinSkyportData(
         hass, websession, email, password, unique_id, name
     )
-    await coordinator.async_config_entry_first_refresh()
+    await coordinator.async_refresh()
 
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
-    hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+    hass.data[DOMAIN][entry.entry_id] = coordinator
 
-    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+    for platform in PLATFORMS:
+        if entry.options.get(platform, True):
+            coordinator.platforms.append(platform)
+            hass.async_add_job(
+                hass.config_entries.async_forward_entry_setup(entry, platform)
+            )
+
+
+    entry.add_update_listener(async_reload_entry)
 
     return True
 
@@ -85,6 +84,11 @@ async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     return unload_ok
 
+
+async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
+    """Reload config entry."""
+    await async_unload_entry(hass, entry)
+    await async_setup_entry(hass, entry)
 
 async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Update listener."""
@@ -103,10 +107,10 @@ class DaikinSkyportData(DataUpdateCoordinator[dict[str, Any]]):
         unique_id: str,
         name: str) -> None:
         """Init the Daikin Skyport data object."""
+        self.platforms = []
         self.unique_id = unique_id
-        self.daikinskyport = DaikinSkyport(config={'EMAIL': email, 'PASSWORD': password})
+        self.daikinskyport = DaikinSkyport(config={'EMAIL': email, 'PASSWORD': password}, session=session)
         self.device_info = DeviceInfo(
-            entry_type=DeviceEntryType.SERVICE,
             identifiers={(DOMAIN, unique_id)},
             manufacturer=MANUFACTURER,
             name=name,
@@ -114,11 +118,10 @@ class DaikinSkyportData(DataUpdateCoordinator[dict[str, Any]]):
         
         super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=MIN_TIME_BETWEEN_UPDATES)
 
-    async def _async_update_data(self) -> dict[str, Any]:
+    async def _async_update_data(self):
         """Update data via library."""
         try:
-            async with timeout(10):
-                current = await self.daikinskyport.update()
+            current = await self.daikinskyport.update()
         except (
             RequestException,
         ) as error:

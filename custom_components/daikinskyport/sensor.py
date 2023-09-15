@@ -18,6 +18,7 @@ from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.helpers.device_registry import DeviceInfo
 from . import DaikinSkyportData
 
 from .const import (
@@ -119,32 +120,14 @@ async def async_setup_entry(
     coordinator: DaikinSkyportData = hass.data[DOMAIN][entry.entry_id]
 
     for index in range(len(coordinator.daikinskyport.thermostats)):
-        for sensor in coordinator.daikinskyport.get_sensors(index):
+        sensors = await coordinator.daikinskyport.get_sensors(index)
+        for sensor in sensors:
             if sensor["type"] not in ("temperature", "humidity", "score",
                                       "ozone", "particle", "VOC", "demand",
                                       "power", "frequency_percent",
-                                      "actual_status"):
+                                      "actual_status") or sensor["value"] == 127.5 or sensor["value"] == 65535:
                 continue
-        async_add_entities(DaikinSkyportSensor(coordinator, sensor["name"], sensor["type"], index))
-
-def setup_platform(hass, config, add_entities, discovery_info=None):
-    """Set up the Daikin Skyport sensors."""
-    if discovery_info is None:
-        return
-    data = hass.data[DOMAIN]
-    dev = list()
-    for index in range(len(data.daikinskyport.thermostats)):
-        for sensor in data.daikinskyport.get_sensors(index):
-            if sensor["type"] not in ("temperature", "humidity", "score",
-                                      "ozone", "particle", "VOC", "demand",
-                                      "power", "frequency_percent",
-                                      "actual_status"):
-                continue
-                
-            dev.append(DaikinSkyportSensor(data, sensor["name"], sensor["type"], index))
-
-    add_entities(dev, True)
-
+            async_add_entities([DaikinSkyportSensor(coordinator, sensor["name"], sensor["type"], index)], True)
 
 class DaikinSkyportSensor(SensorEntity):
     """Representation of a Daikin sensor."""
@@ -154,11 +137,17 @@ class DaikinSkyportSensor(SensorEntity):
         self.data = data
         self._name = f"{sensor_name} {SENSOR_TYPES[sensor_type]['device_class']}"
         self._attr_unique_id = f"{data.daikinskyport.thermostats[sensor_index]['id']}-{self._name}"
+        self._model = f"{data.daikinskyport.thermostats[sensor_index]['model']}"
         self._sensor_name = sensor_name
         self._type = sensor_type
         self._index = sensor_index
         self._state = None
         self._native_unit_of_measurement = SENSOR_TYPES[sensor_type]["native_unit_of_measurement"]
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        """Return device information for this ecobee thermostat."""
+        return self.data.device_info
 
     @property
     def name(self):
@@ -187,9 +176,10 @@ class DaikinSkyportSensor(SensorEntity):
         """Return the unit of measurement this sensor expresses itself in."""
         return self._native_unit_of_measurement
 
-    def update(self):
+    async def async_update(self):
         """Get the latest state of the sensor."""
-        self.data.update()
-        for sensor in self.data.daikinskyport.get_sensors(self._index):
+        await self.data._async_update_data()
+        sensors = await self.data.daikinskyport.get_sensors(self._index)
+        for sensor in sensors:
             if sensor["type"] == self._type and self._sensor_name == sensor["name"]:
                 self._state = sensor["value"]
