@@ -46,3 +46,7 @@ Restart Home Assistant Core via the Home Assistant console by navigating to **Su
 Once Core has restarted, navigate to **Configuration** in the sidebar, then **Entities**. Use the search box to search for the name of your thermostat. For example, search for `main room` (the name of your thermostat is shown on the touch screen). You should see a `climate`, `weather`, and a number of `sensor` entities.
 
 **NOTE:** This component does not show up in the list of Home Assistant integrations.
+
+## Troubleshooting
+
+If you get an error about user_password, delete your daikinskyport.conf file in the base of your config directory.
