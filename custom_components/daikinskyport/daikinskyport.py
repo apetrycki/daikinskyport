@@ -160,6 +160,18 @@ class DaikinSkyport(object):
         except RequestException:
             logger.warn("Error connecting to Daikin Skyport.  Possible connectivity outage.")
             return None
+        except requests.exceptions.HTTPError as e:
+            if e.response.status_code == 400 && e.response.json().get("message") == "DeviceOfflineException":
+                logger.debug("Device is offline.")
+            else:
+                self.authenticated = False
+                logger.debug("Error connecting to Daikin Skyport while attempting to get "
+                            "thermostat data.  Refreshing tokens and trying again.")
+                if self.refresh_tokens():
+                    return self.get_thermostat_info(deviceid)
+                else:
+                    return None
+            return None
         if request.status_code == requests.codes.ok:
             self.authenticated = True
             return request.json()
