@@ -1,0 +1,49 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "data": {
+          "name": "[%key:common::config_flow::data::name%]",
+          "email": "[%key:common::config_flow::data::email%]",
+          "password": "[%key:common::config_flow::data::password%]"
+        }
+      }
+    },
+    "create_entry": {
+      "default": "Some sensors are not enabled by default. You can enable them in the entity registry after the integration configuration.\n"
+    },
+    "error": {
+      "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
+      "invalid_api_key": "[%key:common::config_flow::error::invalid_api_key%]",
+    },
+    "abort": {
+      "single_instance_allowed": "[%key:common::config_flow::abort::single_instance_allowed%]"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "pressure_tendency": {
+        "state": {
+          "steady": "Steady",
+          "rising": "Rising",
+          "falling": "Falling"
+        }
+      }
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "description": "Daikin Skyport Integration for DaikinOne+ Thermostat",
+        "data": {
+          "name": "Name"
+        }
+      }
+    }
+  },
+  "system_health": {
+    "info": {
+      "can_reach_server": "Reach Daikin Skyport server",
+    }
+  }
+}

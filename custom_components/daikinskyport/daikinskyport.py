@@ -38,10 +38,11 @@ def config_from_file(filename, config=None):
 class DaikinSkyport(object):
     ''' Class for storing Daikin Skyport Thermostats and Sensors '''
 
-    def __init__(self, config_filename=None, user_email=None, user_password=None, config=None):
+    def __init__(self, config_filename=None, user_email=None, user_password=None, config=None, session=None):
         self.thermostats = list()
         self.thermostatlist = list()
         self.authenticated = False
+        self.session = session # add something for if session=None
 
         if config is None:
             self.file_based_config = True
@@ -61,7 +62,6 @@ class DaikinSkyport(object):
             logger.error("Email missing from config.")
         if 'PASSWORD' in config: # PASSWORD is only needed during first login
             self.user_password = config['PASSWORD']
-        self.config_filename = config_filename
 
         if 'ACCESS_TOKEN' in config:
             self.access_token = config['ACCESS_TOKEN']
@@ -72,68 +72,78 @@ class DaikinSkyport(object):
             self.refresh_token = config['REFRESH_TOKEN']
         else:
             self.refresh_token = ''
-            self.request_tokens()
-            return
+#            await self.request_tokens()
+#            return
 
-        self.update()
+#        self.update()
 
-    def request_tokens(self):
+    async def request_tokens(self):
         ''' Method to request API tokens from skyport '''
         url = 'https://api.daikinskyport.com/users/auth/login'
         header = {'Accept': 'application/json',
                   'Content-Type': 'application/json'}
         data = {"email": self.user_email, "password": self.user_password}
         try:
-            request = requests.post(url, headers=header, json=data)
-        except RequestException:
-            logger.warn("Error connecting to Daikin Skyport.  Possible connectivity outage."
-                        "Could not request token.")
-            return
-        if request.status_code == requests.codes.ok:
-            self.access_token = request.json()['accessToken']
-            self.refresh_token = request.json()['refreshToken']
+            request = await self.session.post(url, headers=header, json=data)
+        except RequestException as e:
+            logger.error("Error connecting to Daikin Skyport.  Possible connectivity outage."
+                        "Could not request token. %s", e)
+            return False
+        if request.status == requests.codes.ok:
+            json_data = await request.json()
+            self.access_token = json_data['accessToken']
+            self.refresh_token = json_data['refreshToken']
             if self.refresh_token is None:
                 logger.error("Auth did not return a refresh token.")
             else:
-                self.write_tokens_to_file()
+                if self.file_based_config:
+                    self.write_tokens_to_file()
+                return json_data
         else:
-            logger.warn('Error while requesting tokens from daikinskyport.com.'
-                        ' Status code: ' + str(request.status_code))
+            logger.error('Error while requesting tokens from daikinskyport.com.'
+                        ' Status code: ' + str(request.status))
             return
 
-    def refresh_tokens(self):
+    async def refresh_tokens(self):
         ''' Method to refresh API tokens from daikinskyport.com '''
         url = 'https://api.daikinskyport.com/users/auth/token'
         header = {'Accept': 'application/json',
                   'Content-Type': 'application/json'}
         data = {'email': self.user_email,
                   'refreshToken': self.refresh_token}
-        request = requests.post(url, headers=header, json=data)
-        if request.status_code == requests.codes.ok:
-            self.access_token = request.json()['accessToken']
-            self.write_tokens_to_file()
+        request = await self.session.post(url, headers=header, json=data)
+        if request.status == requests.codes.ok:
+            json_data = await request.json()
+            self.access_token = json_data['accessToken']
+            if self.file_based_config:
+                self.write_tokens_to_file()
             return True
         else:
-            self.request_tokens()
+            logger.warn("Could not refresh tokens: " + str(request.status) + " Trying to re-request")
+            result = await self.request_tokens()
+            if result is not None:
+                return True
+            return False
 
-    def get_thermostats(self):
+    async def get_thermostats(self):
         ''' Set self.thermostats to a json list of thermostats from daikinskyport.com '''
         url = 'https://api.daikinskyport.com/devices'
         header = {'Content-Type': 'application/json;charset=UTF-8',
                   'Authorization': 'Bearer ' + self.access_token}
         try:
-            request = requests.get(url, headers=header)
+            request = await self.session.get(url, headers=header)
         except RequestException:
             logger.warn("Error connecting to Daikin Skyport.  Possible connectivity outage.")
             return None
-        if request.status_code == requests.codes.ok:
+        if request.status == requests.codes.ok:
             self.authenticated = True
-            self.thermostatlist = request.json()
+            self.thermostatlist = await request.json()
             for thermostat in self.thermostatlist:
                 overwrite = False
-                thermostat_info = self.get_thermostat_info(thermostat['id'])
+                thermostat_info = await self.get_thermostat_info(thermostat['id'])
                 thermostat_info['name'] = thermostat['name']
                 thermostat_info['id'] = thermostat['id']
+                thermostat_info['model'] = thermostat['model']
                 for index in range(len(self.thermostats)):
                     if thermostat['id'] == self.thermostats[index]['id']:
                         overwrite = True
@@ -145,21 +155,18 @@ class DaikinSkyport(object):
             self.authenticated = False
             logger.debug("Error connecting to Daikin Skyport while attempting to get "
                         "thermostat data.  Refreshing tokens and trying again.")
-            if self.refresh_tokens():
-                return self.get_thermostats()
+            if await self.refresh_tokens():
+                return await self.get_thermostats()
             else:
                 return None
 
-    def get_thermostat_info(self, deviceid):
+    async def get_thermostat_info(self, deviceid):
         ''' Retrieve the device info for the specific device '''
         url = 'https://api.daikinskyport.com/deviceData/' + deviceid
         header = {'Content-Type': 'application/json;charset=UTF-8',
                   'Authorization': 'Bearer ' + self.access_token}
         try:
-            request = requests.get(url, headers=header)
-        except RequestException:
-            logger.warn("Error connecting to Daikin Skyport.  Possible connectivity outage.")
-            return None
+            request = await self.session.get(url, headers=header)
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 400 && e.response.json().get("message") == "DeviceOfflineException":
                 logger.debug("Device is offline.")
@@ -174,21 +181,22 @@ class DaikinSkyport(object):
             return None
         if request.status_code == requests.codes.ok:
             self.authenticated = True
-            return request.json()
+            return await request.json()
         else:
             self.authenticated = False
             logger.debug("Error connecting to Daikin Skyport while attempting to get "
                         "thermostat data.  Refreshing tokens and trying again.")
-            if self.refresh_tokens():
-                return self.get_thermostat_info(deviceid)
+            if await self.refresh_tokens():
+                return await self.get_thermostat_info(deviceid)
             else:
+                logger.error("No refresh tokens during get_thermostat_info")
                 return None
 
-    def get_thermostat(self, index):
+    async def get_thermostat(self, index):
         ''' Return a single thermostat based on index '''
         return self.thermostats[index]
 
-    def get_sensors(self, index):
+    async def get_sensors(self, index):
         ''' Return sensors based on index '''
         sensors = list()
         thermostat = self.thermostats[index]
@@ -222,7 +230,7 @@ class DaikinSkyport(object):
             
         return sensors
 
-    def write_tokens_to_file(self):
+    async def write_tokens_to_file(self):
         ''' Write api tokens to a file '''
         config = dict()
         config['ACCESS_TOKEN'] = self.access_token
@@ -233,32 +241,33 @@ class DaikinSkyport(object):
         else:
             self.config = config
 
-    def update(self):
+    async def update(self):
         ''' Get new thermostat data from daikin skyport '''
-        self.get_thermostats()
+        result = await self.get_thermostats()
+        return result
 
-    def make_request(self, index, body, log_msg_action, *, retry_count=0):
+    async def make_request(self, index, body, log_msg_action, *, retry_count=0):
         deviceID = self.thermostats[index]['id']
         url = 'https://api.daikinskyport.com/deviceData/' + deviceID
         header = {'Content-Type': 'application/json;charset=UTF-8',
                   'Authorization': 'Bearer ' + self.access_token}
         logger.debug("Make Request: Device: %s, Body: %s", deviceID, body)
         try:
-            request = requests.put(url, headers=header, json=body)
+            request = await self.session.post(url, headers=header, json=body)
         except RequestException:
             logger.warn("Error connecting to Daikin Skyport.  Possible connectivity outage.")
             return None
-        if request.status_code == requests.codes.ok:
+        if request.status == requests.codes.ok:
             return request
-        elif (request.status_code == 401 and retry_count == 0 and
-              request.json()['error'] == 'authorization_expired'):
+        elif (request.status == 401 and retry_count == 0 and
+              await request.json()['error'] == 'authorization_expired'):
             if self.refresh_tokens():
                 return self.make_request(body, deviceID, log_msg_action,
                                          retry_count=retry_count + 1)
         else:
             logger.warn(
                 "Error fetching data from Daikin Skyport while attempting to %s: %s",
-                log_msg_action, request.json())
+                log_msg_action, await request.json())
             return None
 
     def set_hvac_mode(self, index, hvac_mode):

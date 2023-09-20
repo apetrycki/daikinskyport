@@ -5,40 +5,54 @@ import logging
 
 from homeassistant.components.weather import (
     ATTR_FORECAST_CONDITION,
-    ATTR_FORECAST_TEMP,
-    ATTR_FORECAST_TEMP_LOW,
+    ATTR_FORECAST_NATIVE_TEMP,
+    ATTR_FORECAST_HUMIDITY,
     ATTR_FORECAST_TIME,
-    ATTR_FORECAST_WIND_SPEED,
+    Forecast,
     WeatherEntity,
+    WeatherEntityFeature,
+)
+from homeassistant.const import (
+    UnitOfLength,
+    UnitOfPressure,
+    UnitOfSpeed,
+    UnitOfTemperature,
 )
 from homeassistant.const import TEMP_CELSIUS
 from homeassistant.util import dt as dt_util
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.core import HomeAssistant
+from homeassistant.config_entries import ConfigEntry
+
 from .const import (
     _LOGGER,
     DOMAIN,
 )
-ATTR_FORECAST_TEMP_HIGH = "temphigh"
-ATTR_FORECAST_PRESSURE = "pressure"
-ATTR_FORECAST_VISIBILITY = "visibility"
-ATTR_FORECAST_HUMIDITY = "humidity"
+from . import DaikinSkyportData
 
-MISSING_DATA = -5002
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
+    """Add a Daikin Skyport Weather entity from a config_entry."""
 
-def setup_platform(hass, config, add_entities, discovery_info=None):
-    """Set up the Daikin Skyport weather platform."""
-    if discovery_info is None:
-        return
-    dev = list()
-    data = hass.data[DOMAIN]
-    for index in range(len(data.daikinskyport.thermostats)):
-        thermostat = data.daikinskyport.get_thermostat(index)
-        dev.append(DaikinSkyportWeather(data,thermostat["name"], index))
+    coordinator: DaikinSkyportData = hass.data[DOMAIN][entry.entry_id]
 
-    add_entities(dev, True)
-
+    for index in range(len(coordinator.daikinskyport.thermostats)):
+        thermostat = await coordinator.daikinskyport.get_thermostat(index)
+        async_add_entities([DaikinSkyportWeather(coordinator, thermostat["name"], index)], True)
 
 class DaikinSkyportWeather(WeatherEntity):
     """Representation of Daikin Skyport weather data."""
+
+    _attr_native_pressure_unit = UnitOfPressure.HPA
+    _attr_native_temperature_unit = UnitOfTemperature.CELSIUS
+    _attr_native_visibility_unit = UnitOfLength.METERS
+    _attr_native_wind_speed_unit = UnitOfSpeed.METERS_PER_SECOND
+    _attr_has_entity_name = True
+    _attr_name = None
+    _attr_supported_features = WeatherEntityFeature.FORECAST_DAILY
 
     def __init__(self, data, name, index):
         """Initialize the Daikin Skyport weather platform."""
@@ -48,12 +62,31 @@ class DaikinSkyportWeather(WeatherEntity):
         self._index = index
         self.weather = None
 
-    def get_forecast(self, param):
-        """Retrieve forecast parameter."""
-        try:
-            return self.weather[param]
-        except (ValueError, IndexError, KeyError):
-            raise ValueError
+    async def async_forecast_daily(self) -> list[Forecast] | None:
+        """Return the daily forecast in native units.
+        
+        Only implement this method if `WeatherEntityFeature.FORECAST_DAILY` is set
+        """
+        
+        forecasts: list[Forecast] = []
+        date = dt_util.utcnow()
+        for day in ["Today", "Day1", "Day2", "Day3", "Day4", "Day5"]:
+            forecast = {}
+            try:
+                forecast[ATTR_FORECAST_CONDITION] = self.weather["weather" + day + "Cond"]
+                forecast[ATTR_FORECAST_NATIVE_TEMP] = self.weather["weather" + day + "TempC"]
+                forecast[ATTR_FORECAST_HUMIDITY] = self.weather["weather" + day + "Hum"]
+            except (ValueError, IndexError, KeyError):
+                continue
+            if forecast is None:
+                continue
+            forecast[ATTR_FORECAST_TIME] = date.isoformat()
+            date += timedelta(days=1)
+            forecasts.append(forecast)
+
+        if forecasts:
+            return forecasts
+        return None
 
     @property
     def name(self):
@@ -64,7 +97,7 @@ class DaikinSkyportWeather(WeatherEntity):
     def condition(self):
         """Return the current condition."""
         try:
-            return self.get_forecast("weatherTodayCond")
+            return self.weather["weatherTodayCond"]
         except ValueError:
             return None
 
@@ -72,47 +105,27 @@ class DaikinSkyportWeather(WeatherEntity):
     def native_temperature(self):
         """Return the temperature."""
         try:
-            return float(self.get_forecast("weatherTodayTempC"))
+            return float(self.weather["weatherTodayTempC"])
         except ValueError:
             return None
-
-    @property
-    def native_temperature_unit(self):
-        """Return the unit of measurement."""
-        return TEMP_CELSIUS
 
     @property
     def humidity(self):
         """Return the humidity."""
         try:
-            return int(self.get_forecast("weatherTodayHum"))
+            return int(self.weather["weatherTodayHum"])
         except ValueError:
             return None
 
     @property
-    def forecast(self):
-        """Return the forecast array."""
-        try:
-            forecasts = []
-            date = dt_util.utcnow()
-            for day in range(1, 5):
-                forecast = {
-                    ATTR_FORECAST_TIME: date.isoformat(),
-                    ATTR_FORECAST_CONDITION: self.weather["weatherDay" + str(day) + "Cond"],
-                    ATTR_FORECAST_TEMP: float(self.weather["weatherDay" + str(day) + "TempC"]),
-                    ATTR_FORECAST_HUMIDITY: int(self.weather["weatherDay" + str(day) + "Hum"])
-                    }
-                date += timedelta(days=1)
-                forecasts.append(forecast)
-            return forecasts
-        except (ValueError, IndexError, KeyError):
-            return None
+    def device_info(self) -> DeviceInfo:
+        return self.data.device_info
 
-    def update(self):
+    async def async_update(self) -> None:
         """Get the latest state of the sensor."""
-        self.data.update()
+        await self.data._async_update_data()
         self.weather = dict()
-        thermostat = self.data.daikinskyport.get_thermostat(self._index)
+        thermostat = await self.data.daikinskyport.get_thermostat(self._index)
         for key in thermostat:
             if key.startswith('weather'):
                 self.weather[key] = thermostat[key]

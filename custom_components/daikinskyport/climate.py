@@ -34,14 +34,22 @@ from homeassistant.components.climate.const import (
 )
 from homeassistant.const import (
     ATTR_ENTITY_ID,
-    STATE_ON,
     ATTR_TEMPERATURE,
-    TEMP_FAHRENHEIT,
-    TEMP_CELSIUS,
-    CONF_PASSWORD,
-    CONF_EMAIL,
+    PRECISION_HALVES,
+    PRECISION_TENTHS,
+    STATE_OFF,
+    STATE_ON,
+    UnitOfTemperature,
 )
+
 import homeassistant.helpers.config_validation as cv
+from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.core import HomeAssistant
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.helpers.device_registry import DeviceInfo
+
+from . import DaikinSkyportData
 
 from .const import (
     _LOGGER,
@@ -208,18 +216,16 @@ SUPPORT_FLAGS = (
     | SUPPORT_FAN_MODE
 )
 
+async def async_setup_entry(
+    hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
+) -> None:
+    """Add a Daikin Skyport Climate entity from a config_entry."""
 
-def setup_platform(hass, config, add_entities, discovery_info=None):
-    """Set up the Daikin Skyport Thermostat Platform."""
-    if discovery_info is None:
-        return
-    data = hass.data[DOMAIN]
-    
-    devices = [
-        Thermostat(data, index)
-        for index in range(len(data.daikinskyport.thermostats))
-    ]
-    add_entities(devices)
+    coordinator: DaikinSkyportData = hass.data[DOMAIN][entry.entry_id]
+
+    for index in range(len(coordinator.daikinskyport.thermostats)):
+        thermostat = await coordinator.daikinskyport.get_thermostat(index)
+        async_add_entities([Thermostat(coordinator, index, thermostat)], True)
 
     def resume_program_set_service(service):
         """Resume the schedule on the target thermostats."""
@@ -320,35 +326,35 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 
             thermostat.schedule_update_ha_state(True)
 
-    hass.services.register(
+    hass.services.async_register(
         DOMAIN,
         SERVICE_RESUME_PROGRAM,
         resume_program_set_service,
         schema=RESUME_PROGRAM_SCHEMA,
     )
 
-    hass.services.register(
+    hass.services.async_register(
         DOMAIN,
         SERVICE_SET_FAN_SCHEDULE,
         set_fan_schedule_service,
         schema=FAN_SCHEDULE_SCHEMA,
     )
 
-    hass.services.register(
+    hass.services.async_register(
         DOMAIN,
         SERVICE_SET_NIGHT_MODE,
         set_night_mode_service,
         schema=NIGHT_MODE_SCHEMA,
     )
 
-    hass.services.register(
+    hass.services.async_register(
         DOMAIN,
         SERVICE_SET_THERMOSTAT_SCHEDULE,
         set_thermostat_schedule_service,
         schema=THERMOSTAT_SCHEDULE_SCHEMA,
     )
 
-    hass.services.register(
+    hass.services.async_register(
         DOMAIN,
         SERVICE_SET_ONECLEAN,
         set_oneclean_service,
@@ -358,11 +364,17 @@ def setup_platform(hass, config, add_entities, discovery_info=None):
 class Thermostat(ClimateEntity):
     """A thermostat class for Daikin Skyport Thermostats."""
 
-    def __init__(self, data, thermostat_index):
+    _attr_precision = PRECISION_TENTHS
+    _attr_temperature_unit = UnitOfTemperature.CELSIUS
+    _attr_fan_modes = [FAN_AUTO, FAN_ON, FAN_SCHEDULE]
+    _attr_name = None
+    _attr_has_entity_name = True
+
+    def __init__(self, data, thermostat_index, thermostat):
         """Initialize the thermostat."""
         self.data = data
         self.thermostat_index = thermostat_index
-        self.thermostat = self.data.daikinskyport.get_thermostat(self.thermostat_index)
+        self.thermostat = thermostat
         self._name = self.thermostat["name"]
         self._attr_unique_id = f"{self.thermostat['id']}-climate"
         self._cool_setpoint = self.thermostat["cspActive"]
@@ -396,16 +408,16 @@ class Thermostat(ClimateEntity):
         self._fan_modes = [FAN_AUTO, FAN_ON, FAN_LOW, FAN_MEDIUM, FAN_HIGH, FAN_SCHEDULE]
         self.update_without_throttle = False
 
-    def update(self):
+    async def async_update(self):
         """Get the latest state from the thermostat."""
         if self.update_without_throttle:
             sleep(3)
-            self.data.update(no_throttle=True)
+            await self.data._async_update_data()
             self.update_without_throttle = False
         else:
-            self.data.update()
+            await self.data._async_update_data()
 
-        self.thermostat = self.data.daikinskyport.get_thermostat(self.thermostat_index)
+        self.thermostat = await self.data.daikinskyport.get_thermostat(self.thermostat_index)
         self._cool_setpoint = self.thermostat["cspActive"]
         self._heat_setpoint = self.thermostat["hspActive"]
         self._hvac_mode = DAIKIN_HVAC_TO_HASS[self.thermostat["mode"]]
@@ -419,6 +431,10 @@ class Thermostat(ClimateEntity):
             self._preset_mode = PRESET_SCHEDULE
         else:
             self._preset_mode = PRESET_MANUAL
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return self.data.device_info
 
     @property
     def available(self):
@@ -436,12 +452,7 @@ class Thermostat(ClimateEntity):
         return self.thermostat["name"]
 
     @property
-    def temperature_unit(self):
-        """Return the unit of measurement."""
-        return TEMP_CELSIUS
-
-    @property
-    def current_temperature(self):
+    def current_temperature(self) -> float:
         """Return the current temperature."""
         return self.thermostat["tempIndoor"]
 
