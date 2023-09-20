@@ -34,13 +34,14 @@ from homeassistant.components.climate.const import (
 )
 from homeassistant.const import (
     ATTR_ENTITY_ID,
-    STATE_ON,
     ATTR_TEMPERATURE,
-    TEMP_FAHRENHEIT,
-    TEMP_CELSIUS,
-    CONF_PASSWORD,
-    CONF_EMAIL,
+    PRECISION_HALVES,
+    PRECISION_TENTHS,
+    STATE_OFF,
+    STATE_ON,
+    UnitOfTemperature,
 )
+
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
@@ -363,6 +364,12 @@ async def async_setup_entry(
 class Thermostat(ClimateEntity):
     """A thermostat class for Daikin Skyport Thermostats."""
 
+    _attr_precision = PRECISION_TENTHS
+    _attr_temperature_unit = UnitOfTemperature.CELSIUS
+    _attr_fan_modes = [FAN_AUTO, FAN_ON, FAN_SCHEDULE]
+    _attr_name = None
+    _attr_has_entity_name = True
+
     def __init__(self, data, thermostat_index, thermostat):
         """Initialize the thermostat."""
         self.data = data
@@ -445,12 +452,7 @@ class Thermostat(ClimateEntity):
         return self.thermostat["name"]
 
     @property
-    def temperature_unit(self):
-        """Return the unit of measurement."""
-        return TEMP_CELSIUS
-
-    @property
-    def current_temperature(self):
+    def current_temperature(self) -> float:
         """Return the current temperature."""
         return self.thermostat["tempIndoor"]
 

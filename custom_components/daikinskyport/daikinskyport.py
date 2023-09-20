@@ -113,7 +113,8 @@ class DaikinSkyport(object):
                   'refreshToken': self.refresh_token}
         request = await self.session.post(url, headers=header, json=data)
         if request.status == requests.codes.ok:
-            self.access_token = await request.json()['accessToken']
+            json_data = await request.json()
+            self.access_token = json_data['accessToken']
             if self.file_based_config:
                 self.write_tokens_to_file()
             return True
@@ -177,7 +178,7 @@ class DaikinSkyport(object):
             logger.debug("Error connecting to Daikin Skyport while attempting to get "
                         "thermostat data.  Refreshing tokens and trying again.")
             if await self.refresh_tokens():
-                return self.get_thermostat_info(deviceid)
+                return await self.get_thermostat_info(deviceid)
             else:
                 logger.error("No refresh tokens during get_thermostat_info")
                 return None
@@ -233,7 +234,8 @@ class DaikinSkyport(object):
 
     async def update(self):
         ''' Get new thermostat data from daikin skyport '''
-        return await self.get_thermostats()
+        result = await self.get_thermostats()
+        return result
 
     async def make_request(self, index, body, log_msg_action, *, retry_count=0):
         deviceID = self.thermostats[index]['id']
