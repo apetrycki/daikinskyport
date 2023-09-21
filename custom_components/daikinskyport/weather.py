@@ -99,7 +99,8 @@ class DaikinSkyportWeather(WeatherEntity):
         """Return the current condition."""
         try:
             return DAIKIN_WEATHER_SYMBOL_TO_HASS[self.weather["weatherTodayCond"]]
-        except ValueError:
+        except KeyError as e:
+            _LOGGER.error("Key not found for weather condition: %s", e.message)
             return None
 
     @property
