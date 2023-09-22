@@ -16,6 +16,7 @@ _HACS must be [installed](https://hacs.xyz/docs/installation/prerequisites) befo
 3. On the integrations page, select the "vertical dots" icon in the top-right corner, and select **Custom respositories**.
 4. Paste `https://github.com/apetrycki/daikinskyport` into the **Add custom repository URL** box and select **Integration** in the **Category** menu.
 5. Select **Add**.
+6. Restart Home Assistant Core via the Home Assistant console by navigating to **Supervisor** in the sidebar on the left, selecting the **System** tab, and clicking **Restart Core**. A restart is necessary in order to load the component.
 
 ### Manual Install
 
@@ -29,24 +30,11 @@ _A manual installation is more risky than installation via HACS. You must be fam
 
 In order for this component to talk with your thermostat, the thermostat must be registered with your online Daikin account. If you haven't already done so, follow the instructions for pairing with the mobile app in the [Daikin documentation](https://backend.daikincomfort.com/docs/default-source/product-documents/residential-accessories/other/hg-one-st.pdf?sfvrsn=c0692726_38).
 
-After pairing the thermostat and installing the component, activate the component by adding the lines below to the Home Assistant `configuration.yaml`. You can find instructions for editing this file in the [Home Assistant documentation](https://www.home-assistant.io/docs/configuration/).
-
-```
-daikinskyport:
-  email: <your email>
-  password: <your password>
-```
+After pairing the thermostat and installing the component, activate the component by going to **Settings**, **Devices & Services**, **Add Integration**, and searching for Daikin Skyport.  Enter your email and password at the prompt and optionally a name for your account.
 
 The email and password must be the same ones that you used when you created your account in the mobile app.
 
-Indentation is important! The `daikinskyport:` line should be left-aligned with no leading whitespace and the `email:` and `password:` lines should be indented by two spaces.
-
-Restart Home Assistant Core via the Home Assistant console by navigating to **Supervisor** in the sidebar on the left, selecting the **System** tab, and clicking **Restart Core**. A restart is necessary in order to load the component.
 
 Once Core has restarted, navigate to **Configuration** in the sidebar, then **Entities**. Use the search box to search for the name of your thermostat. For example, search for `main room` (the name of your thermostat is shown on the touch screen). You should see a `climate`, `weather`, and a number of `sensor` entities.
 
 **NOTE:** This component does not show up in the list of Home Assistant integrations.
-
-## Troubleshooting
-
-If you get an error about user_password, delete your daikinskyport.conf file in the base of your config directory.
