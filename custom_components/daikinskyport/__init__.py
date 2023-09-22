@@ -75,8 +75,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     coordinator = DaikinSkyportData(
         hass, config, unique_id, entry
     )
-    if not await coordinator.async_refresh():
-        return False
 
     await coordinator._async_update_data()
     
@@ -162,7 +160,7 @@ class DaikinSkyportData:
         try:
             current = await self.hass.async_add_executor_job(self.daikinskyport.update)
         except ExpiredTokenError:
-            _LOGGER.debug("Refreshing expired Daikin Skyport tokens")
+            _LOGGER.debug("Daikin Skyport tokens expired")
             await self.async_refresh()
         _LOGGER.debug("Daikin Skyport data updated successfully")
         return
