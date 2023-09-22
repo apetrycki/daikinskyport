@@ -41,7 +41,7 @@ async def async_setup_entry(
     coordinator: DaikinSkyportData = hass.data[DOMAIN][entry.entry_id]
 
     for index in range(len(coordinator.daikinskyport.thermostats)):
-        thermostat = await coordinator.daikinskyport.get_thermostat(index)
+        thermostat = coordinator.daikinskyport.get_thermostat(index)
         async_add_entities([DaikinSkyportWeather(coordinator, thermostat["name"], index)], True)
 
 class DaikinSkyportWeather(WeatherEntity):
@@ -127,7 +127,7 @@ class DaikinSkyportWeather(WeatherEntity):
         """Get the latest state of the sensor."""
         await self.data._async_update_data()
         self.weather = dict()
-        thermostat = await self.data.daikinskyport.get_thermostat(self._index)
+        thermostat = self.data.daikinskyport.get_thermostat(self._index)
         for key in thermostat:
             if key.startswith('weather'):
                 self.weather[key] = thermostat[key]

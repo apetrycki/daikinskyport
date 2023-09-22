@@ -120,7 +120,7 @@ async def async_setup_entry(
     coordinator: DaikinSkyportData = hass.data[DOMAIN][entry.entry_id]
 
     for index in range(len(coordinator.daikinskyport.thermostats)):
-        sensors = await coordinator.daikinskyport.get_sensors(index)
+        sensors = coordinator.daikinskyport.get_sensors(index)
         for sensor in sensors:
             if sensor["type"] not in ("temperature", "humidity", "score",
                                       "ozone", "particle", "VOC", "demand",
@@ -179,7 +179,7 @@ class DaikinSkyportSensor(SensorEntity):
     async def async_update(self):
         """Get the latest state of the sensor."""
         await self.data._async_update_data()
-        sensors = await self.data.daikinskyport.get_sensors(self._index)
+        sensors = self.data.daikinskyport.get_sensors(self._index)
         for sensor in sensors:
             if sensor["type"] == self._type and self._sensor_name == sensor["name"]:
                 self._state = sensor["value"]

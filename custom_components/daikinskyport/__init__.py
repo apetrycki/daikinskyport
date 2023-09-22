@@ -4,7 +4,6 @@ from datetime import timedelta
 from async_timeout import timeout
 from requests.exceptions import RequestException
 from typing import Any
-from aiohttp import ClientSession
 
 import voluptuous as vol
 
@@ -21,15 +20,16 @@ from homeassistant.core import HomeAssistant
 from homeassistant.util import Throttle
 from homeassistant.helpers.json import save_json
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.device_registry import DeviceEntryType
 from homeassistant.helpers.entity import DeviceInfo
 
-from .daikinskyport import DaikinSkyport
+from .daikinskyport import DaikinSkyport, ExpiredTokenError
 from .const import (
     _LOGGER,
     DOMAIN,
     MANUFACTURER,
+    CONF_ACCESS_TOKEN,
+    CONF_REFRESH_TOKEN,
 )
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
@@ -47,18 +47,38 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     email: str = entry.data[CONF_EMAIL]
     password: str = entry.data[CONF_PASSWORD]
     name: str = entry.data[CONF_NAME]
+    try: 
+        access_token: str = entry.data[CONF_ACCESS_TOKEN]
+        refresh_token: str = entry.data[CONF_REFRESH_TOKEN]
+    except (NameError, KeyError):
+        _LOGGER.debug("Tokens not in config for Daikin Skyport")
+        access_token = ""
+        refresh_token = ""
+    config = {
+        "EMAIL": email,
+        "PASSWORD": password,
+        "ACCESS_TOKEN": access_token,
+        "REFRESH_TOKEN": refresh_token,
+    }
+        
     assert entry.unique_id is not None
     unique_id = entry.unique_id
 
     _LOGGER.debug("Using email: %s", email)
 
-    websession = async_get_clientsession(hass)
 
     coordinator = DaikinSkyportData(
-        hass, websession, email, password, unique_id, name
+        hass, config, unique_id, entry
     )
-    await coordinator.async_refresh()
+    if not await coordinator.async_refresh():
+        return False
 
+    await coordinator._async_update_data()
+    
+    if coordinator.daikinskyport.thermostats is None:
+        _LOGGER.error("No Daikin Skyport devices found to set up")
+        return False
+        
     entry.async_on_unload(entry.add_update_listener(update_listener))
 
     hass.data[DOMAIN][entry.entry_id] = coordinator
@@ -95,36 +115,54 @@ async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     await hass.config_entries.async_reload(entry.entry_id)
 
 
-class DaikinSkyportData(DataUpdateCoordinator[dict[str, Any]]):
+class DaikinSkyportData:
     """Get the latest data and update the states."""
 
     def __init__(
         self, 
         hass: HomeAssistant, 
-        session: ClientSession, 
-        email: str, 
-        password: str, 
+        config, 
         unique_id: str,
-        name: str) -> None:
+        entry: ConfigEntry) -> None:
         """Init the Daikin Skyport data object."""
         self.platforms = []
+        self.name = entry.data[CONF_NAME]
+        self.hass = hass
+        self.entry = entry
         self.unique_id = unique_id
-        self.daikinskyport = DaikinSkyport(config={'EMAIL': email, 'PASSWORD': password}, session=session)
+        self.daikinskyport = DaikinSkyport(config=config)
         self.device_info = DeviceInfo(
             identifiers={(DOMAIN, unique_id)},
             manufacturer=MANUFACTURER,
-            name=name,
+            name=self.name,
             )
         
-        super().__init__(hass, _LOGGER, name=DOMAIN, update_interval=MIN_TIME_BETWEEN_UPDATES)
-
+    @Throttle(MIN_TIME_BETWEEN_UPDATES)
     async def _async_update_data(self):
         """Update data via library."""
         try:
-            current = await self.daikinskyport.update()
-        except (
-            RequestException,
-        ) as error:
-            raise UpdateFailed(error) from error
+            current = await self.hass.async_add_executor_job(self.daikinskyport.update)
+        except ExpiredTokenError:
+            _LOGGER.debug("Refreshing expired Daikin Skyport tokens")
+            await self.async_refresh()
         _LOGGER.debug("Daikin Skyport data updated successfully")
         return
+
+    async def async_refresh(self) -> bool:
+        """Refresh tokens and update config entry."""
+        _LOGGER.debug("Refreshing Daikin Skyport tokens and updating config entry")
+        if await self.hass.async_add_executor_job(self.daikinskyport.refresh_tokens):
+            self.hass.config_entries.async_update_entry(
+                self.entry,
+                data={
+                    CONF_NAME: self.name,
+                    CONF_REFRESH_TOKEN: self.daikinskyport.refresh_token,
+                    CONF_ACCESS_TOKEN: self.daikinskyport.access_token,
+                    CONF_EMAIL: self.daikinskyport.user_email,
+                    CONF_PASSWORD: self.daikinskyport.user_password,
+                },
+            )
+            return True
+        _LOGGER.error("Error refreshing Daikin Skyport tokens")
+        return False
+

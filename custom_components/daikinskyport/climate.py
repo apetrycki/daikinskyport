@@ -1,6 +1,5 @@
 """Support for Daikin Skyport Thermostats."""
 import collections
-from time import sleep
 from datetime import datetime
 from typing import Optional
 
@@ -224,7 +223,7 @@ async def async_setup_entry(
     coordinator: DaikinSkyportData = hass.data[DOMAIN][entry.entry_id]
 
     for index in range(len(coordinator.daikinskyport.thermostats)):
-        thermostat = await coordinator.daikinskyport.get_thermostat(index)
+        thermostat = coordinator.daikinskyport.get_thermostat(index)
         async_add_entities([Thermostat(coordinator, index, thermostat)], True)
 
     def resume_program_set_service(service):
@@ -411,13 +410,12 @@ class Thermostat(ClimateEntity):
     async def async_update(self):
         """Get the latest state from the thermostat."""
         if self.update_without_throttle:
-            sleep(3)
-            await self.data._async_update_data()
+            await self.data._async_update_data(no_throttle=True)
             self.update_without_throttle = False
         else:
             await self.data._async_update_data()
 
-        self.thermostat = await self.data.daikinskyport.get_thermostat(self.thermostat_index)
+        self.thermostat = self.data.daikinskyport.get_thermostat(self.thermostat_index)
         self._cool_setpoint = self.thermostat["cspActive"]
         self._heat_setpoint = self.thermostat["hspActive"]
         self._hvac_mode = DAIKIN_HVAC_TO_HASS[self.thermostat["mode"]]
