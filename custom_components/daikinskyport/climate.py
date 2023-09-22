@@ -58,6 +58,7 @@ from .const import (
     DAIKIN_HVAC_MODE_COOL,
     DAIKIN_HVAC_MODE_AUTO,
     DAIKIN_HVAC_MODE_AUXHEAT,
+    COORDINATOR,
 )
 
 WEEKDAY = [ "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -220,7 +221,8 @@ async def async_setup_entry(
 ) -> None:
     """Add a Daikin Skyport Climate entity from a config_entry."""
 
-    coordinator: DaikinSkyportData = hass.data[DOMAIN][entry.entry_id]
+    data = hass.data[DOMAIN][entry.entry_id]
+    coordinator: DaikinSkyportData = data[COORDINATOR]
 
     for index in range(len(coordinator.daikinskyport.thermostats)):
         thermostat = coordinator.daikinskyport.get_thermostat(index)

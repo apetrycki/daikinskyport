@@ -24,6 +24,7 @@ from . import DaikinSkyportData
 from .const import (
     _LOGGER,
     DOMAIN,
+    COORDINATOR,
 )
 
 DEVICE_CLASS_DEMAND = "demand"
@@ -117,7 +118,8 @@ async def async_setup_entry(
 ) -> None:
     """Add a Daikin Skyport Sensor entity from a config_entry."""
 
-    coordinator: DaikinSkyportData = hass.data[DOMAIN][entry.entry_id]
+    data = hass.data[DOMAIN][entry.entry_id]
+    coordinator: DaikinSkyportData = data[COORDINATOR]
 
     for index in range(len(coordinator.daikinskyport.thermostats)):
         sensors = coordinator.daikinskyport.get_sensors(index)

@@ -176,7 +176,8 @@ class DaikinSkyport(object):
             else:
                 self.authenticated = False
                 logger.debug("Error connecting to Daikin Skyport while attempting to get "
-                            "thermostat data.  Refreshing tokens and trying again.")
+                            "thermostat data. %s", str(e.response.status_code))
+            raise ExpiredTokenError ("Daikin Skyport token expired")
             return None
         if request.status_code == requests.codes.ok:
             self.authenticated = True
@@ -184,12 +185,9 @@ class DaikinSkyport(object):
         else:
             self.authenticated = False
             logger.debug("Error connecting to Daikin Skyport while attempting to get "
-                        "thermostat data.  Refreshing tokens and trying again.")
-            if self.refresh_tokens():
-                return self.get_thermostat_info(deviceid)
-            else:
-                logger.error("No refresh tokens during get_thermostat_info")
-                return None
+                        "thermostat data.")
+            raise ExpiredTokenError ("Daikin Skyport token expired")
+            return None
 
     def get_thermostat(self, index):
         ''' Return a single thermostat based on index '''

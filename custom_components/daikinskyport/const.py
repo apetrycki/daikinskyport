@@ -50,3 +50,5 @@ DAIKIN_HVAC_MODE_AUXHEAT = 4
 
 CONF_REFRESH_TOKEN = "refresh_token"
 CONF_ACCESS_TOKEN = "access_token"
+
+COORDINATOR = "coordinator"

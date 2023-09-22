@@ -30,9 +30,11 @@ from .const import (
     MANUFACTURER,
     CONF_ACCESS_TOKEN,
     CONF_REFRESH_TOKEN,
+    COORDINATOR,
 )
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
+UNDO_UPDATE_LISTENER = "undo_update_listener"
 
 NETWORK = None
 
@@ -46,7 +48,10 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     email: str = entry.data[CONF_EMAIL]
     password: str = entry.data[CONF_PASSWORD]
-    name: str = entry.data[CONF_NAME]
+    try:
+        name: str = entry.options[CONF_NAME]
+    except (NameError, KeyError):
+        name: str = entry.data[CONF_NAME]
     try: 
         access_token: str = entry.data[CONF_ACCESS_TOKEN]
         refresh_token: str = entry.data[CONF_REFRESH_TOKEN]
@@ -79,9 +84,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.error("No Daikin Skyport devices found to set up")
         return False
         
-    entry.async_on_unload(entry.add_update_listener(update_listener))
+#    entry.async_on_unload(entry.add_update_listener(update_listener))
 
-    hass.data[DOMAIN][entry.entry_id] = coordinator
 
     for platform in PLATFORMS:
         if entry.options.get(platform, True):
@@ -91,27 +95,39 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
             )
 
 
-    entry.add_update_listener(async_reload_entry)
+    undo_listener = entry.add_update_listener(update_listener)
 
+    hass.data[DOMAIN][entry.entry_id] = {
+        COORDINATOR: coordinator,
+        UNDO_UPDATE_LISTENER: undo_listener
+    }
     return True
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Unload a config entry."""
+    _LOGGER.debug("Unload Entry: %s", str(entry))
     unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    
+    hass.data[DOMAIN][entry.entry_id][UNDO_UPDATE_LISTENER]()
 
     if unload_ok:
         hass.data[DOMAIN].pop(entry.entry_id)
+        if not hass.data[DOMAIN]:
+            hass.data.pop(DOMAIN)
 
+    
     return unload_ok
 
 
 async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Reload config entry."""
+    _LOGGER.debug("Reload Entry: %s", str(entry))
     await async_unload_entry(hass, entry)
     await async_setup_entry(hass, entry)
 
 async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Update listener."""
+    _LOGGER.debug("Update listener: %s", str(entry))
     await hass.config_entries.async_reload(entry.entry_id)
 
 
@@ -126,7 +142,10 @@ class DaikinSkyportData:
         entry: ConfigEntry) -> None:
         """Init the Daikin Skyport data object."""
         self.platforms = []
-        self.name = entry.data[CONF_NAME]
+        try:
+            self.name: str = entry.options[CONF_NAME]
+        except (NameError, KeyError):
+            self.name: str = entry.data[CONF_NAME]
         self.hass = hass
         self.entry = entry
         self.unique_id = unique_id

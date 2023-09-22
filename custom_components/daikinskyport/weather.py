@@ -29,6 +29,7 @@ from homeassistant.config_entries import ConfigEntry
 from .const import (
     _LOGGER,
     DAIKIN_WEATHER_SYMBOL_TO_HASS,
+    COORDINATOR,
     DOMAIN,
 )
 from . import DaikinSkyportData
@@ -38,7 +39,8 @@ async def async_setup_entry(
 ) -> None:
     """Add a Daikin Skyport Weather entity from a config_entry."""
 
-    coordinator: DaikinSkyportData = hass.data[DOMAIN][entry.entry_id]
+    data = hass.data[DOMAIN][entry.entry_id]
+    coordinator: DaikinSkyportData = data[COORDINATOR]
 
     for index in range(len(coordinator.daikinskyport.thermostats)):
         thermostat = coordinator.daikinskyport.get_thermostat(index)
@@ -47,10 +49,7 @@ async def async_setup_entry(
 class DaikinSkyportWeather(WeatherEntity):
     """Representation of Daikin Skyport weather data."""
 
-    _attr_native_pressure_unit = UnitOfPressure.HPA
     _attr_native_temperature_unit = UnitOfTemperature.CELSIUS
-    _attr_native_visibility_unit = UnitOfLength.METERS
-    _attr_native_wind_speed_unit = UnitOfSpeed.METERS_PER_SECOND
     _attr_has_entity_name = True
     _attr_name = None
     _attr_supported_features = WeatherEntityFeature.FORECAST_DAILY
