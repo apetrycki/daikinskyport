@@ -6,6 +6,8 @@ import logging
 from time import sleep
 
 from requests.exceptions import RequestException
+from requests.adapters import HTTPAdapter
+from requests.packages.urllib3.util.retry import Retry
 
 from .const import DAIKIN_PERCENT_MULTIPLIER
 
@@ -135,10 +137,16 @@ class DaikinSkyport(object):
         url = 'https://api.daikinskyport.com/devices'
         header = {'Content-Type': 'application/json;charset=UTF-8',
                   'Authorization': 'Bearer ' + self.access_token}
+        retry_strategy = Retry(total=8, backoff_factor=0.1, max_backoff=5.0)
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        http = requests.Session()
+        http.mount("https://", adapter)
+        http.mount("http://", adapter)
+
         try:
-            request = requests.get(url, headers=header)
-        except RequestException:
-            logger.warn("Error connecting to Daikin Skyport.  Possible connectivity outage.")
+            request = http.get(url, headers=header)
+        except RequestException as e:
+            logger.warn("Error connecting to Daikin Skyport.  Possible connectivity outage: %s", e)
             return None
         if request.status_code == requests.codes.ok:
             self.authenticated = True
@@ -168,8 +176,14 @@ class DaikinSkyport(object):
         url = 'https://api.daikinskyport.com/deviceData/' + deviceid
         header = {'Content-Type': 'application/json;charset=UTF-8',
                   'Authorization': 'Bearer ' + self.access_token}
+        retry_strategy = Retry(total=8, backoff_factor=0.1, max_backoff=5.0)
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        http = requests.Session()
+        http.mount("https://", adapter)
+        http.mount("http://", adapter)
+
         try:
-            request = requests.get(url, headers=header)
+            request = http.get(url, headers=header)
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 400 and e.response.json().get("message") == "DeviceOfflineException":
                 logger.warn("Device is offline.")
@@ -250,10 +264,16 @@ class DaikinSkyport(object):
         header = {'Content-Type': 'application/json;charset=UTF-8',
                   'Authorization': 'Bearer ' + self.access_token}
         logger.debug("Make Request: %s, Device: %s, Body: %s", log_msg_action, deviceID, body)
+        retry_strategy = Retry(total=8, backoff_factor=0.1, max_backoff=5.0)
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        http = requests.Session()
+        http.mount("https://", adapter)
+        http.mount("http://", adapter)
+
         try:
-            request = requests.put(url, headers=header, json=body)
-        except RequestException:
-            logger.warn("Error connecting to Daikin Skyport.  Possible connectivity outage.")
+            request = http.put(url, headers=header, json=body)
+        except RequestException as e:
+            logger.warn("Error connecting to Daikin Skyport.  Possible connectivity outage: %s", e)
             return None
         if request.status_code == requests.codes.ok:
             return request
