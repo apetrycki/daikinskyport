@@ -29,6 +29,7 @@ DAIKIN_WEATHER_SYMBOL_TO_HASS = {
     "Cloudy": ATTR_CONDITION_CLOUDY,
     "Mostly Cloudy": ATTR_CONDITION_CLOUDY,
     "Rain": ATTR_CONDITION_RAINY,
+    "Showers in the Vicinity": ATTR_CONDITION_RAINY,
     "Light Rain": ATTR_CONDITION_RAINY,
     "Snow": ATTR_CONDITION_SNOWY, #Unknown
     "Snow and Rain": ATTR_CONDITION_SNOWY_RAINY, #Unknown
