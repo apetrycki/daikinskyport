@@ -118,6 +118,9 @@ DAIKIN_FAN_TO_HASS = collections.OrderedDict(
         (0, FAN_AUTO),
         (1, FAN_ON),
         (2, FAN_SCHEDULE),
+        (3, FAN_LOW),
+        (4, FAN_MEDIUM),
+        (5, FAN_HIGH),
     ]
 )
 
@@ -381,7 +384,10 @@ class Thermostat(ClimateEntity):
         self._cool_setpoint = self.thermostat["cspActive"]
         self._heat_setpoint = self.thermostat["hspActive"]
         self._hvac_mode = DAIKIN_HVAC_TO_HASS[self.thermostat["mode"]]
-        self._fan_mode = DAIKIN_FAN_TO_HASS[self.thermostat["fanCirculate"]]
+        if DAIKIN_FAN_TO_HASS[self.thermostat["mode"]] == FAN_ON:
+            self._fan_mode = DAIKIN_FAN_TO_HASS[self.thermostat["fanCirculateSpeed"] + 3]
+        else:
+            self._fan_mode = DAIKIN_FAN_TO_HASS[self.thermostat["fanCirculate"]]
         self._fan_speed = DAIKIN_FAN_SPEED_TO_HASS[self.thermostat["fanCirculateSpeed"]]
         if self.thermostat["geofencingAway"]:
             self._preset_mode = PRESET_AWAY
@@ -421,7 +427,10 @@ class Thermostat(ClimateEntity):
         self._cool_setpoint = self.thermostat["cspActive"]
         self._heat_setpoint = self.thermostat["hspActive"]
         self._hvac_mode = DAIKIN_HVAC_TO_HASS[self.thermostat["mode"]]
-        self._fan_mode = DAIKIN_FAN_TO_HASS[self.thermostat["fanCirculate"]]
+        if DAIKIN_FAN_TO_HASS[self.thermostat["mode"]] == FAN_ON:
+            self._fan_mode = DAIKIN_FAN_TO_HASS[self.thermostat["fanCirculateSpeed"] + 3]
+        else:
+            self._fan_mode = DAIKIN_FAN_TO_HASS[self.thermostat["fanCirculate"]]
         self._fan_speed = DAIKIN_FAN_SPEED_TO_HASS[self.thermostat["fanCirculateSpeed"]]
         if self.thermostat["geofencingAway"]:
             self._preset_mode = PRESET_AWAY
