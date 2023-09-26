@@ -532,10 +532,14 @@ class Thermostat(ClimateEntity):
     def extra_state_attributes(self):
         """Return device specific state attributes."""
         status = self.thermostat["equipmentStatus"]
+        if self.thermostat["ctAHCurrentIndoorAirflow"] == 65535:
+            fan_cfm = self.thermostat["ctIFCIndoorBlowerAirflow"]
+        else:
+            fan_cfm = self.thermostat["ctAHCurrentIndoorAirflow"]
         return {
             "fan": self.fan,
             "schedule_mode": self.thermostat["schedEnabled"],
-            "fan_cfm": self.thermostat["ctAHCurrentIndoorAirflow"],
+            "fan_cfm": fan_cfm,
             "fan_demand": round(self.thermostat["ctAHFanCurrentDemandStatus"] / 2, 1),
             "cooling_demand": round(self.thermostat["ctOutdoorCoolRequestedDemand"] / 2, 1),
             "heating_demand": round(self.thermostat["ctAHHeatRequestedDemand"] / 2, 1),
