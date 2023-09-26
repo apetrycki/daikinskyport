@@ -137,7 +137,7 @@ class DaikinSkyport(object):
         url = 'https://api.daikinskyport.com/devices'
         header = {'Content-Type': 'application/json;charset=UTF-8',
                   'Authorization': 'Bearer ' + self.access_token}
-        retry_strategy = Retry(total=8, backoff_factor=0.1, max_backoff=5.0)
+        retry_strategy = Retry(total=8, backoff_factor=0.1)
         adapter = HTTPAdapter(max_retries=retry_strategy)
         http = requests.Session()
         http.mount("https://", adapter)
@@ -176,7 +176,7 @@ class DaikinSkyport(object):
         url = 'https://api.daikinskyport.com/deviceData/' + deviceid
         header = {'Content-Type': 'application/json;charset=UTF-8',
                   'Authorization': 'Bearer ' + self.access_token}
-        retry_strategy = Retry(total=8, backoff_factor=0.1, max_backoff=5.0)
+        retry_strategy = Retry(total=8, backoff_factor=0.1)
         adapter = HTTPAdapter(max_retries=retry_strategy)
         http = requests.Session()
         http.mount("https://", adapter)
