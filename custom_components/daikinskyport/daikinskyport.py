@@ -264,7 +264,7 @@ class DaikinSkyport(object):
         header = {'Content-Type': 'application/json;charset=UTF-8',
                   'Authorization': 'Bearer ' + self.access_token}
         logger.debug("Make Request: %s, Device: %s, Body: %s", log_msg_action, deviceID, body)
-        retry_strategy = Retry(total=8, backoff_factor=0.1, max_backoff=5.0)
+        retry_strategy = Retry(total=8, backoff_factor=0.1,)
         adapter = HTTPAdapter(max_retries=retry_strategy)
         http = requests.Session()
         http.mount("https://", adapter)
