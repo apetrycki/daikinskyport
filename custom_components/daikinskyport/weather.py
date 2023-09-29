@@ -28,7 +28,7 @@ from homeassistant.config_entries import ConfigEntry
 
 from .const import (
     _LOGGER,
-    DAIKIN_WEATHER_SYMBOL_TO_HASS,
+    DAIKIN_WEATHER_ICON_TO_HASS,
     COORDINATOR,
     DOMAIN,
 )
@@ -73,9 +73,10 @@ class DaikinSkyportWeather(WeatherEntity):
         for day in ["Today", "Day1", "Day2", "Day3", "Day4", "Day5"]:
             forecast = {}
             try:
-                forecast[ATTR_FORECAST_CONDITION] = DAIKIN_WEATHER_SYMBOL_TO_HASS[self.weather["weather" + day + "Cond"]]
+                forecast[ATTR_FORECAST_CONDITION] = DAIKIN_WEATHER_ICON_TO_HASS[self.weather["weather" + day + "Icon"]]
                 forecast[ATTR_FORECAST_NATIVE_TEMP] = self.weather["weather" + day + "TempC"]
                 forecast[ATTR_FORECAST_HUMIDITY] = self.weather["weather" + day + "Hum"]
+                _LOGGER.debug("Weather icon for weather%sIcon: %s", day, self.weather["weather" + day + "Icon"])
             except (ValueError, IndexError, KeyError):
                 continue
             if forecast is None:
@@ -97,7 +98,8 @@ class DaikinSkyportWeather(WeatherEntity):
     def condition(self):
         """Return the current condition."""
         try:
-            return DAIKIN_WEATHER_SYMBOL_TO_HASS[self.weather["weatherTodayCond"]]
+            _LOGGER.debug("Weather icon for weatherTodayIcon: %s", self.weather["weatherTodayIcon"])
+            return DAIKIN_WEATHER_ICON_TO_HASS[self.weather["weatherTodayIcon"]]
         except KeyError as e:
             _LOGGER.error("Key not found for weather condition: %s", e)
             return None

@@ -6,10 +6,12 @@ DOMAIN = "daikinskyport"
 MANUFACTURER = "Daikin"
 
 from homeassistant.components.weather import (
-    ATTR_CONDITION_CLOUDY,
     ATTR_CONDITION_CLEAR_NIGHT,
+    ATTR_CONDITION_CLOUDY,
+    ATTR_CONDITION_EXCEPTIONAL,
     ATTR_CONDITION_FOG,
     ATTR_CONDITION_HAIL,
+    ATTR_CONDITION_LIGHTNING,
     ATTR_CONDITION_LIGHTNING_RAINY,
     ATTR_CONDITION_PARTLYCLOUDY,
     ATTR_CONDITION_POURING,
@@ -18,6 +20,7 @@ from homeassistant.components.weather import (
     ATTR_CONDITION_SNOWY_RAINY,
     ATTR_CONDITION_SUNNY,
     ATTR_CONDITION_WINDY,
+    ATTR_CONDITION_WINDY_VARIANT,
 )
 
 DAIKIN_WEATHER_SYMBOL_TO_HASS = {
@@ -29,6 +32,7 @@ DAIKIN_WEATHER_SYMBOL_TO_HASS = {
     "Cloudy": ATTR_CONDITION_CLOUDY,
     "Mostly Cloudy": ATTR_CONDITION_CLOUDY,
     "Rain": ATTR_CONDITION_RAINY,
+    "Rain Shower": ATTR_CONDITION_RAINY,
     "Showers in the Vicinity": ATTR_CONDITION_RAINY,
     "Light Rain": ATTR_CONDITION_RAINY,
     "Snow": ATTR_CONDITION_SNOWY, #Unknown
@@ -39,6 +43,22 @@ DAIKIN_WEATHER_SYMBOL_TO_HASS = {
     "Thunderstorms Late": ATTR_CONDITION_LIGHTNING_RAINY,
     "Fog": ATTR_CONDITION_FOG, #Unknown
     "Hazy": "hazy", #Unknown
+}
+
+DAIKIN_WEATHER_ICON_TO_HASS = {
+    "sunny": ATTR_CONDITION_SUNNY, #Unknown
+    "partlycloudy": ATTR_CONDITION_PARTLYCLOUDY,
+    "clear": ATTR_CONDITION_CLEAR_NIGHT, #Unknown
+    "fair": ATTR_CONDITION_CLEAR_NIGHT, #Unknown
+    "cloudy": ATTR_CONDITION_CLOUDY, #Unknown
+    "rain": ATTR_CONDITION_RAINY, #Unknown
+    "snow": ATTR_CONDITION_SNOWY, #Unknown
+    "snowrain": ATTR_CONDITION_SNOWY_RAINY, #Unknown
+    "hail": ATTR_CONDITION_HAIL, #Unknown
+    "tstorms": ATTR_CONDITION_LIGHTNING,
+    "tstormsrain": ATTR_CONDITION_LIGHTNING_RAINY, #Unknown
+    "fog": ATTR_CONDITION_FOG, #Unknown
+    "hazy": "hazy", #Unknown
 }
 
 # The multiplier applied by the API to percentage values.
