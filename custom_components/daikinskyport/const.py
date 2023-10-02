@@ -5,6 +5,7 @@ _LOGGER = logging.getLogger(__package__)
 DOMAIN = "daikinskyport"
 MANUFACTURER = "Daikin"
 
+# Full list of HA conditions as of 10/2023
 from homeassistant.components.weather import (
     ATTR_CONDITION_CLEAR_NIGHT,
     ATTR_CONDITION_CLOUDY,
@@ -23,42 +24,28 @@ from homeassistant.components.weather import (
     ATTR_CONDITION_WINDY_VARIANT,
 )
 
-DAIKIN_WEATHER_SYMBOL_TO_HASS = {
-    "Sunny": ATTR_CONDITION_SUNNY,
-    "Mostly Sunny": ATTR_CONDITION_PARTLYCLOUDY,
-    "Partly Cloudy": ATTR_CONDITION_PARTLYCLOUDY,
-    "Clear": ATTR_CONDITION_CLEAR_NIGHT,
-    "Fair": ATTR_CONDITION_CLEAR_NIGHT,
-    "Cloudy": ATTR_CONDITION_CLOUDY,
-    "Mostly Cloudy": ATTR_CONDITION_CLOUDY,
-    "Rain": ATTR_CONDITION_RAINY,
-    "Rain Shower": ATTR_CONDITION_RAINY,
-    "Showers in the Vicinity": ATTR_CONDITION_RAINY,
-    "Light Rain": ATTR_CONDITION_RAINY,
-    "Snow": ATTR_CONDITION_SNOWY, #Unknown
-    "Snow and Rain": ATTR_CONDITION_SNOWY_RAINY, #Unknown
-    "Hail": ATTR_CONDITION_HAIL, #Unknown
-    "Thunderstorms": ATTR_CONDITION_LIGHTNING_RAINY,
-    "AM Thunderstorms": ATTR_CONDITION_LIGHTNING_RAINY,
-    "Thunderstorms Late": ATTR_CONDITION_LIGHTNING_RAINY,
-    "Fog": ATTR_CONDITION_FOG, #Unknown
-    "Hazy": "hazy", #Unknown
-}
-
+# Map Daikin weather icons to HA conditions (weather icons are always the same, *Cond change with language)
+# Unknown entries are unverifed.  Taken from Weather Underground icon names
 DAIKIN_WEATHER_ICON_TO_HASS = {
     "sunny": ATTR_CONDITION_SUNNY, #Unknown
+    "mostlysunny": ATTR_CONDITION_SUNNY, #Unknown
+    "partlysunny": ATTR_CONDITION_PARTLYCLOUDY, #Unknown
     "partlycloudy": ATTR_CONDITION_PARTLYCLOUDY,
     "clear": ATTR_CONDITION_CLEAR_NIGHT, #Unknown
-    "fair": ATTR_CONDITION_CLEAR_NIGHT, #Unknown
+    "mostlycloudy": ATTR_CONDITION_CLOUDY,
     "cloudy": ATTR_CONDITION_CLOUDY, #Unknown
-    "rain": ATTR_CONDITION_RAINY, #Unknown
+    "rain": ATTR_CONDITION_RAINY,
+    "chancerain": ATTR_CONDITION_RAINY,
     "snow": ATTR_CONDITION_SNOWY, #Unknown
-    "snowrain": ATTR_CONDITION_SNOWY_RAINY, #Unknown
-    "hail": ATTR_CONDITION_HAIL, #Unknown
+    "chancesnow": ATTR_CONDITION_SNOWY, #Unknown
+    "chanceflurries": ATTR_CONDITION_SNOWY, #Unknown
+    "flurries": ATTR_CONDITION_SNOWY, #Unknown
     "tstorms": ATTR_CONDITION_LIGHTNING,
-    "tstormsrain": ATTR_CONDITION_LIGHTNING_RAINY, #Unknown
+    "chancetstorms": ATTR_CONDITION_LIGHTNING,
     "fog": ATTR_CONDITION_FOG, #Unknown
     "hazy": "hazy", #Unknown
+    "sleet": "sleet", #Unknown
+    "chancesleet": "sleet",  #Unknown
 }
 
 # The multiplier applied by the API to percentage values.

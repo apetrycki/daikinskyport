@@ -77,9 +77,12 @@ class DaikinSkyportWeather(WeatherEntity):
                 forecast[ATTR_FORECAST_NATIVE_TEMP] = self.weather["weather" + day + "TempC"]
                 forecast[ATTR_FORECAST_HUMIDITY] = self.weather["weather" + day + "Hum"]
                 _LOGGER.debug("Weather icon for weather%sIcon: %s", day, self.weather["weather" + day + "Icon"])
-            except (ValueError, IndexError, KeyError):
+            except (ValueError, IndexError, KeyError) as e:
+                _LOGGER.error("Key not found for weather icon: %s", e)
+                date += timedelta(days=1)
                 continue
             if forecast is None:
+                date += timedelta(days=1)
                 continue
             forecast[ATTR_FORECAST_TIME] = date.isoformat()
             date += timedelta(days=1)
