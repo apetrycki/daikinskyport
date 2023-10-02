@@ -162,6 +162,7 @@ class DaikinSkyportData:
         except ExpiredTokenError:
             _LOGGER.debug("Daikin Skyport tokens expired")
             await self.async_refresh()
+            await self.hass.async_add_executor_job(self.daikinskyport.update)
         _LOGGER.debug("Daikin Skyport data updated successfully")
         return
 
