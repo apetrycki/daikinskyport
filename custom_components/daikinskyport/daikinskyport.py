@@ -108,7 +108,7 @@ class DaikinSkyport(object):
                 return json_data
         else:
             logger.error('Error while requesting tokens from daikinskyport.com.'
-                        ' Status code: ' + str(request.status_code))
+                        ' Status code: %s Message: %s', request.status_code, request.text)
             return
 
     def refresh_tokens(self):
@@ -126,7 +126,7 @@ class DaikinSkyport(object):
                 self.write_tokens_to_file()
             return True
         else:
-            logger.warn("Could not refresh tokens: " + str(request.status_code) + " Trying to re-request")
+            logger.warn("Could not refresh tokens, Trying to re-request. Status code: %s Message: %s ", request.status_code, request.text)
             result = self.request_tokens()
             if result is not None:
                 return True
@@ -167,7 +167,7 @@ class DaikinSkyport(object):
         else:
             self.authenticated = False
             logger.debug("Error connecting to Daikin Skyport while attempting to get "
-                        "thermostat data.")
+                        "thermostat data. Status code: %s Message: %s", request.status_code, request.text)
             raise ExpiredTokenError ("Daikin Skyport token expired")
             return None
 
@@ -184,13 +184,14 @@ class DaikinSkyport(object):
 
         try:
             request = http.get(url, headers=header)
+            request.raise_for_status()
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 400 and e.response.json().get("message") == "DeviceOfflineException":
                 logger.warn("Device is offline.")
             else:
                 self.authenticated = False
-                logger.debug("Error connecting to Daikin Skyport while attempting to get "
-                            "thermostat data. %s", str(e.response.status_code))
+            logger.debug("Error connecting to Daikin Skyport while attempting to get "
+                        "thermostat data. Status code: %s Message: %s", request.status_code, request.text)
             raise ExpiredTokenError ("Daikin Skyport token expired")
             return None
         if request.status_code == requests.codes.ok:
@@ -199,7 +200,7 @@ class DaikinSkyport(object):
         else:
             self.authenticated = False
             logger.debug("Error connecting to Daikin Skyport while attempting to get "
-                        "thermostat data.")
+                        "thermostat data. Status code: %s Message: %s", request.status_code, request.text)
             raise ExpiredTokenError ("Daikin Skyport token expired")
             return None
 
