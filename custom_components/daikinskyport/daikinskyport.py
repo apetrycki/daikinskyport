@@ -154,6 +154,8 @@ class DaikinSkyport(object):
             for thermostat in self.thermostatlist:
                 overwrite = False
                 thermostat_info = self.get_thermostat_info(thermostat['id'])
+                if thermostat_info == None:
+                    continue
                 thermostat_info['name'] = thermostat['name']
                 thermostat_info['id'] = thermostat['id']
                 thermostat_info['model'] = thermostat['model']
@@ -188,6 +190,8 @@ class DaikinSkyport(object):
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 400 and e.response.json().get("message") == "DeviceOfflineException":
                 logger.warn("Device is offline.")
+                self.authenticated = True
+                return None
             else:
                 self.authenticated = False
             logger.debug("Error connecting to Daikin Skyport while attempting to get "
