@@ -44,7 +44,7 @@ from homeassistant.const import (
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.device_registry import DeviceInfo
 
@@ -101,6 +101,9 @@ ATTR_SCHEDULE_ACTION = "action" #Unknown what this does right now
 
 #OneClean values
 ATTR_ONECLEAN_ENABLED = "enable"
+
+#Efficiency value
+ATTR_EFFICIENCY_ENABLED = "enable"
 
 # Order matters, because for reverse mapping we don't want to map HEAT to AUX
 DAIKIN_HVAC_TO_HASS = collections.OrderedDict(
@@ -165,6 +168,7 @@ SERVICE_SET_FAN_SCHEDULE = "daikin_set_fan_schedule"
 SERVICE_SET_NIGHT_MODE = "daikin_set_night_mode"
 SERVICE_SET_THERMOSTAT_SCHEDULE = "daikin_set_thermostat_schedule"
 SERVICE_SET_ONECLEAN = "daikin_set_oneclean"
+SERVICE_PRIORITIZE_EFFICIENCY = "daikin_prioritize_efficiency"
 
 RESUME_PROGRAM_SCHEMA = vol.Schema(
     {
@@ -211,6 +215,13 @@ ONECLEAN_SCHEMA = vol.Schema(
     }
 )
 
+EFFICIENCY_SCHEMA = vol.Schema(
+    {
+        vol.Optional(ATTR_ENTITY_ID): cv.entity_ids,
+        vol.Optional(ATTR_EFFICIENCY_ENABLED): cv.boolean,
+    }
+)
+
 SUPPORT_FLAGS = (
     SUPPORT_TARGET_TEMPERATURE
     | SUPPORT_PRESET_MODE
@@ -226,72 +237,69 @@ async def async_setup_entry(
 
     data = hass.data[DOMAIN][entry.entry_id]
     coordinator: DaikinSkyportData = data[COORDINATOR]
+    entities = []
 
     for index in range(len(coordinator.daikinskyport.thermostats)):
         thermostat = coordinator.daikinskyport.get_thermostat(index)
-        async_add_entities([Thermostat(coordinator, index, thermostat)], True)
+        entities.append(Thermostat(coordinator, index, thermostat))
+    
+    async_add_entities(entities, True)
 
-    def resume_program_set_service(service):
+    def resume_program_set_service(service: ServiceCall) -> None:
         """Resume the schedule on the target thermostats."""
-        entity_id = service.data.get(ATTR_ENTITY_ID)
+        entity_ids = service.data[ATTR_ENTITY_ID]
 
-        if entity_id:
-            target_thermostats = [
-                device for device in devices if device.entity_id in entity_id
-            ]
-        else:
-            target_thermostats = devices
-
-        for thermostat in target_thermostats:
-            thermostat.resume_program()
-
-            thermostat.schedule_update_ha_state(True)
+        _LOGGER.info("Resuming program for %s", entity_ids)
+        
+        for entity in entity_ids:
+            for thermostat in entities:
+                if thermostat.entity_id == entity:
+                    thermostat.resume_program()
+                    _LOGGER.info("Program resumed for %s", entity)
+                    thermostat.schedule_update_ha_state(True)
+                    break
 
     def set_fan_schedule_service(service):
         """Set the fan schedule on the target thermostats."""
-        entity_id = service.data.get(ATTR_ENTITY_ID)
         
         start = service.data.get(ATTR_FAN_START_TIME)
         stop = service.data.get(ATTR_FAN_STOP_TIME)
         interval = service.data.get(ATTR_FAN_INTERVAL)
         speed = service.data.get(ATTR_FAN_SPEED)
 
-        if entity_id:
-            target_thermostats = [
-                device for device in devices if device.entity_id in entity_id
-            ]
-        else:
-            target_thermostats = devices
+        entity_ids = service.data[ATTR_ENTITY_ID]
 
-        for thermostat in target_thermostats:
-            thermostat.set_fan_schedule(start, stop, interval, speed)
-
-            thermostat.schedule_update_ha_state(True)
+        _LOGGER.info("Setting fan schedule for %s", entity_ids)
+        
+        for entity in entity_ids:
+            for thermostat in entities:
+                if thermostat.entity_id == entity:
+                    thermostat.set_fan_schedule(start, stop, interval, speed)
+                    _LOGGER.info("Fan schedule set for %s", entity)
+                    thermostat.schedule_update_ha_state(True)
+                    break
 
     def set_night_mode_service(service):
         """Set night mode on the target thermostats."""
-        entity_id = service.data.get(ATTR_ENTITY_ID)
         
         start = service.data.get(ATTR_NIGHT_MODE_START_TIME)
         stop = service.data.get(ATTR_NIGHT_MODE_END_TIME)
         enable = service.data.get(ATTR_NIGHT_MODE_ENABLE)
 
-        if entity_id:
-            target_thermostats = [
-                device for device in devices if device.entity_id in entity_id
-            ]
-        else:
-            target_thermostats = devices
+        entity_ids = service.data[ATTR_ENTITY_ID]
 
-        for thermostat in target_thermostats:
-            thermostat.set_night_mode(start, stop, enable)
-
-            thermostat.schedule_update_ha_state(True)
+        _LOGGER.info("Setting night mode for %s", entity_ids)
+        
+        for entity in entity_ids:
+            for thermostat in entities:
+                if thermostat.entity_id == entity:
+                    thermostat.set_night_mode(start, stop, enable)
+                    _LOGGER.info("Night mode set for %s", entity)
+                    thermostat.schedule_update_ha_state(True)
+                    break
 
     def set_thermostat_schedule_service(service):
         """Set the thermostat schedule on the target thermostats."""
-        entity_id = service.data.get(ATTR_ENTITY_ID)
-        
         day = service.data.get(ATTR_SCHEDULE_DAY)
         start = service.data.get(ATTR_SCHEDULE_START_TIME)
         part = service.data.get(ATTR_SCHEDULE_PART)
@@ -300,35 +308,49 @@ async def async_setup_entry(
         heating = service.data.get(ATTR_SCHEDULE_HEATING_SETPOINT)
         cooling = service.data.get(ATTR_SCHEDULE_COOLING_SETPOINT)
 
-        if entity_id:
-            target_thermostats = [
-                device for device in devices if device.entity_id in entity_id
-            ]
-        else:
-            target_thermostats = devices
+        entity_ids = service.data[ATTR_ENTITY_ID]
 
-        for thermostat in target_thermostats:
-            thermostat.set_thermostat_schedule(day, start, part, enable, label, heating, cooling)
-
-            thermostat.schedule_update_ha_state(True)
+        _LOGGER.info("Setting thermostat schedule for %s", entity_ids)
+        
+        for entity in entity_ids:
+            for thermostat in entities:
+                if thermostat.entity_id == entity:
+                    thermostat.set_thermostat_schedule(day, start, part, enable, label, heating, cooling)
+                    _LOGGER.info("Thermostat schedule set for %s", entity)
+                    thermostat.schedule_update_ha_state(True)
+                    break
 
     def set_oneclean_service(service):
         """Enable/disable OneClean."""
-        entity_id = service.data.get(ATTR_ENTITY_ID)
-        
         enable = service.data.get(ATTR_ONECLEAN_ENABLED)
 
-        if entity_id:
-            target_thermostats = [
-                device for device in devices if device.entity_id in entity_id
-            ]
-        else:
-            target_thermostats = devices
+        entity_ids = service.data[ATTR_ENTITY_ID]
 
-        for thermostat in target_thermostats:
-            thermostat.set_oneclean(enable)
+        _LOGGER.info("Setting OneClean for %s", entity_ids)
+        
+        for entity in entity_ids:
+            for thermostat in entities:
+                if thermostat.entity_id == entity:
+                    thermostat.set_oneclean(enable)
+                    _LOGGER.info("OneClean set for %s", entity)
+                    thermostat.schedule_update_ha_state(True)
+                    break
 
-            thermostat.schedule_update_ha_state(True)
+    def set_efficiency_service(service):
+        """Enable/disable heat pump efficiency."""
+        enable = service.data.get(ATTR_EFFICIENCY_ENABLED)
+
+        entity_ids = service.data[ATTR_ENTITY_ID]
+
+        _LOGGER.info("Setting efficiency for %s", entity_ids)
+        
+        for entity in entity_ids:
+            for thermostat in entities:
+                if thermostat.entity_id == entity:
+                    thermostat.set_efficiency(enable)
+                    _LOGGER.info("Efficiency set for %s", entity)
+                    thermostat.schedule_update_ha_state(True)
+                    break
 
     hass.services.async_register(
         DOMAIN,
@@ -363,6 +385,13 @@ async def async_setup_entry(
         SERVICE_SET_ONECLEAN,
         set_oneclean_service,
         schema=ONECLEAN_SCHEMA,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_PRIORITIZE_EFFICIENCY,
+        set_efficiency_service,
+        schema=EFFICIENCY_SCHEMA,
     )
 
 class Thermostat(ClimateEntity):
@@ -802,6 +831,13 @@ class Thermostat(ClimateEntity):
     def set_oneclean(self, enable):
         """Enable/disable OneClean."""
         self.data.daikinskyport.set_fan_clean(
+            self.thermostat_index, enable
+        )
+        self.update_without_throttle = True
+
+    def set_efficiency(self, enable):
+        """Enable/disable heat pump efficiency."""
+        self.data.daikinskyport.set_dual_fuel_efficiency(
             self.thermostat_index, enable
         )
         self.update_without_throttle = True

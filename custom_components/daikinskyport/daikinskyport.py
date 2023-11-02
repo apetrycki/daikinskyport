@@ -332,6 +332,13 @@ class DaikinSkyport(object):
         log_msg_action = "set fan clean mode"
         return self.make_request(index, body, log_msg_action)
 
+    def set_dual_fuel_efficiency(self, index, active):
+        ''' Enable/disable dual fuel efficiency mode.  This disables the use of aux heat above -5.5C/22F.
+        active values are true/false'''
+        body = {"ctDualFuelFurnaceLockoutEnable": active}
+        log_msg_action = "set dual fuel efficiency mode"
+        return self.make_request(index, body, log_msg_action)
+
     def set_temp_hold(self, index, cool_temp=None, heat_temp=None,
                       hold_duration=None):
         ''' Set a temporary hold '''

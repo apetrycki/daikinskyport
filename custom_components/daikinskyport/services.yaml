@@ -3,6 +3,10 @@ daikin_resume_program:
     Return to the schedule from manual mode
   fields:
     entity_id:
+      selector:
+        entity:
+          integration: daikinskyport
+          domain: climate
       description: thermostat on which to resume the schedule.
       example: "climate.kitchen"
 daikin_set_fan_schedule:
@@ -10,71 +14,161 @@ daikin_set_fan_schedule:
     Set a schedule for running the HVAC fan to clean the air
   fields:
     entity_id:
+      selector:
+        entity:
+          integration: daikinskyport
+          domain: climate
       description: thermostat on which to set the schedule.
       example: "climate.kitchen"
     start_time:
       description: is the beginning of the schedule per day.  It is an integer value where every 15 minutes from 00:00 is 1 (each hour = 4)
       example: "32"
+      selector:
+        number:
+          min: 0
+          max: 96
     end_time:
       description: is the end of the schedule per day.  It is an integer value where every 15 minutes from 00:00 is 1 (each hour = 4)
       example: "72"
+      selector:
+        number:
+          min: 0
+          max: 96
     interval:
       description:  the run time per hour of the schedule. Options are - on the full time (0), 5mins (1), 15mins (2), 30mins (3), and 45mins (4)
       example: "2"
+      selector:
+        number:
+          min: 0
+          max: 4
     fan_speed:
       description: the speed at which the fan runs during the schedule.  Options are low (0), medium (1), high (2)
+      selector:
+        number:
+          min: 0
+          max: 2
 daikin_set_night_mode:
   description: >-
     Enable/Disable night mode and set time night mode occurs
   fields:
     entity_id:
+      selector:
+        entity:
+          integration: daikinskyport
+          domain: climate
       description: thermostat on which to set the schedule.
       example: "climate.kitchen"
     start_time:
       description: when to start night mode. It is an integer value where every 15 minutes from 00:00 is 1 (each hour = 4)
       example: "92"
+      selector:
+        number:
+          min: 0
+          max: 96
     end_time:
       description: when to end night mode. It is an integer value where every 15 minutes from 00:00 is 1 (each hour = 4)
       example: "24"
+      selector:
+        number:
+          min: 0
+          max: 96
     enable:
       description: Enable/Disable night mode.  True = enabled
       example: True
+      selector:
+        boolean:
 daikin_set_thermostat_schedule:
   description: >-
     Configure the thermostat schedule
   fields:
     entity_id:
+      selector:
+        entity:
+          integration: daikinskyport
+          domain: climate
       description: thermostat on which to set the schedule.
       example: "climate.kitchen"
     day:
       description: which day of the week to modify. Defaults to the current day of the week
       example: "Mon"
+      selector:
+        select:
+          options:
+            - "Mon"
+            - "Tue"
+            - "Wed"
+            - "Thu"
+            - "Fri"
+            - "Sat"
+            - "Sun"
     part:
       description: which part of the day in the schedule to modify (1-6). Defaults to 1
       example: "2"
+      selector:
+        number:
+          min: 0
+          max: 96
     start_time:
       description: when to start this part of the schedule. It is an integer value where every 15 minutes from 00:00 is 1 (each hour = 4). Defaults to previous setting.
       example: "92"
+      selector:
+        number:
+          min: 0
+          max: 96
     enable:
       description: Boolean to enable (True) or disable (False) this part of the schedule. Defaults to previous setting
       example: "True"
+      selector:
+        boolean:
     label:
       description: a name for the part of the schedule. Defaults to previous setting
       example: "work"
+      selector:
+        text:
     heat_temp_setpoint:
       description: temperature to turn the heat on. Defaults to previous setting
       example: "65"
+      selector:
+        number:
+          min: 0
+          max: 96
     cool_temp_setpoint:
       description: temperature to turn the air conditioning on at. Defaults to previous setting
       example: "75"
+      selector:
+        number:
+          min: 0
+          max: 96
 daikin_set_oneclean:
   description: >-
     Enable/Disable OneClean which runs the fan at high speed for 3 hours
   fields:
     entity_id:
+      selector:
+        entity:
+          integration: daikinskyport
+          domain: climate
       description: thermostat on which to set the schedule.
       example: "climate.kitchen"
     enable:
       description: Boolean to enable (True) or disable (False) OneClean.
       example: "True"
- 
+      selector:
+        boolean:
+daikin_prioritize_efficiency:
+  description: >-
+     Set whether a heatpump system uses aux heat above -5.5C (22F) to heat more rapidly
+  fields:
+    entity_id:
+      selector:
+        entity:
+          integration: daikinskyport
+          domain: climate
+      description: thermostat on which to set the schedule.
+      example: "climate.kitchen"
+    enable:
+      description: Boolean to enable (True) or disable (False) efficiency mode.
+      example: "True"
+      selector:
+        boolean:
+      
