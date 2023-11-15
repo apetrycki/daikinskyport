@@ -586,7 +586,12 @@ class Thermostat(ClimateEntity):
             "humidification_demand": round(self.thermostat["ctAHHumidificationRequestedDemand"] / 2, 1),
             "thermostat_version": self.thermostat["statFirmware"],
             "night_mode_active": self.thermostat["nightModeActive"],
-            "night_mode_enabled": self.thermostat["nightModeEnabled"]
+            "night_mode_enabled": self.thermostat["nightModeEnabled"],
+            "furnace_mode": self.thermostat["ctIFCOperatingHeatCoolMode"],
+            "heatpump_mode": self.thermostat["ctOutdoorMode"],
+            "thermostat_locked": int(self.thermostat["displayLockPIN"] != 0),
+            "filter_days": self.thermostat["alertMediaAirFilterDays"]
+
         }
 
     @property
