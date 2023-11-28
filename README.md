@@ -11,12 +11,15 @@ This component can be installed via the [Home Assistant Community Store (HACS)](
 
 _HACS must be [installed](https://hacs.xyz/docs/installation/prerequisites) before following these steps._
 
-1. Log into your Home Assistant instance and open HACS via the sidebar on the left.
-2. In the HACS console, open **Integrations**.
-3. On the integrations page, select the "vertical dots" icon in the top-right corner, and select **Custom respositories**.
-4. Paste `https://github.com/apetrycki/daikinskyport` into the **Add custom repository URL** box and select **Integration** in the **Category** menu.
-5. Select **Add**.
-6. Restart Home Assistant Core via the Home Assistant console by navigating to **Supervisor** in the sidebar on the left, selecting the **System** tab, and clicking **Restart Core**. A restart is necessary in order to load the component.
+1. Log into your Home Assistant instance and open HACS via the sidebar on the left
+2. In the HACS menu, open **Integrations**
+3. On the integrations page, select the "vertical dots" icon in the top-right corner, and select **Custom respositories**
+4. Paste `https://github.com/apetrycki/daikinskyport` into the **Repository** field and select **Integration** in the **Category** menu
+5. Click **ADD**
+6. Click **+ EXPLORE & DOWNLOAD REPOSITORIES**
+7. Select **Daikin Skyport** and click the **DOWNLOAD** button
+8. Click **DOWNLOAD**
+9. Restart Home Assistant Core via the Home Assistant console by navigating to **Supervisor** in the sidebar on the left, selecting the **System** tab, and clicking **Restart Core**. A restart is necessary in order to load the component.
 
 ### Manual Install
 
