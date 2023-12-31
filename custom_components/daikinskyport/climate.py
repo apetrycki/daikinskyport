@@ -5,7 +5,10 @@ from typing import Optional
 
 import voluptuous as vol
 
-from homeassistant.components.climate import ClimateEntity
+from homeassistant.components.climate import (
+    ClimateEntity,
+    ClimateEntityFeature
+)
 from homeassistant.components.climate.const import (
     HVAC_MODE_COOL,
     HVAC_MODE_HEAT,
@@ -13,10 +16,6 @@ from homeassistant.components.climate.const import (
     HVAC_MODE_OFF,
     ATTR_TARGET_TEMP_LOW,
     ATTR_TARGET_TEMP_HIGH,
-    SUPPORT_TARGET_TEMPERATURE,
-    SUPPORT_AUX_HEAT,
-    SUPPORT_TARGET_TEMPERATURE_RANGE,
-    SUPPORT_FAN_MODE,
     PRESET_AWAY,
     FAN_AUTO,
     FAN_ON,
@@ -26,7 +25,6 @@ from homeassistant.components.climate.const import (
     CURRENT_HVAC_IDLE,
     CURRENT_HVAC_HEAT,
     CURRENT_HVAC_COOL,
-    SUPPORT_PRESET_MODE,
     PRESET_NONE,
     CURRENT_HVAC_FAN,
     CURRENT_HVAC_DRY,
@@ -223,11 +221,11 @@ EFFICIENCY_SCHEMA = vol.Schema(
 )
 
 SUPPORT_FLAGS = (
-    SUPPORT_TARGET_TEMPERATURE
-    | SUPPORT_PRESET_MODE
-    | SUPPORT_AUX_HEAT
-    | SUPPORT_TARGET_TEMPERATURE_RANGE
-    | SUPPORT_FAN_MODE
+    ClimateEntityFeature.TARGET_TEMPERATURE
+    | ClimateEntityFeature.PRESET_MODE
+    | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
+    | ClimateEntityFeature.FAN_MODE
+    | ClimateEntityFeature.AUX_HEAT
 )
 
 async def async_setup_entry(
