@@ -1,11 +1,11 @@
 """Support for Daikin Skyport sensors."""
 from homeassistant.const import (
     PERCENTAGE,
-    TEMP_CELSIUS,
+    UnitOfTemperature,
     CONCENTRATION_PARTS_PER_MILLION,
     CONCENTRATION_PARTS_PER_BILLION,
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
-    POWER_WATT
+    UnitOfPower
 )
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -34,7 +34,7 @@ DEVICE_CLASS_ACTUAL_STATUS = "actual"
 SENSOR_TYPES = {
     "temperature": {
         "device_class": SensorDeviceClass.TEMPERATURE,
-        "native_unit_of_measurement": TEMP_CELSIUS,
+        "native_unit_of_measurement": UnitOfTemperature.CELSIUS,
         "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:thermometer",
     },
@@ -94,7 +94,7 @@ SENSOR_TYPES = {
     },
     "power": {
         "device_class": SensorDeviceClass.POWER,
-        "native_unit_of_measurement": POWER_WATT,
+        "native_unit_of_measurement": UnitOfPower.WATT,
         "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:power-plug",
     },

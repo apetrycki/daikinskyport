@@ -7,13 +7,11 @@ import voluptuous as vol
 
 from homeassistant.components.climate import (
     ClimateEntity,
-    ClimateEntityFeature
+    ClimateEntityFeature,
+    HVACMode,
+    HVACAction
 )
 from homeassistant.components.climate.const import (
-    HVAC_MODE_COOL,
-    HVAC_MODE_HEAT,
-    HVAC_MODE_AUTO,
-    HVAC_MODE_OFF,
     ATTR_TARGET_TEMP_LOW,
     ATTR_TARGET_TEMP_HIGH,
     PRESET_AWAY,
@@ -22,12 +20,7 @@ from homeassistant.components.climate.const import (
     FAN_LOW,
     FAN_MEDIUM,
     FAN_HIGH,
-    CURRENT_HVAC_IDLE,
-    CURRENT_HVAC_HEAT,
-    CURRENT_HVAC_COOL,
     PRESET_NONE,
-    CURRENT_HVAC_FAN,
-    CURRENT_HVAC_DRY,
 )
 from homeassistant.const import (
     ATTR_ENTITY_ID,
@@ -106,11 +99,11 @@ ATTR_EFFICIENCY_ENABLED = "enable"
 # Order matters, because for reverse mapping we don't want to map HEAT to AUX
 DAIKIN_HVAC_TO_HASS = collections.OrderedDict(
     [
-        (DAIKIN_HVAC_MODE_HEAT, HVAC_MODE_HEAT),
-        (DAIKIN_HVAC_MODE_COOL, HVAC_MODE_COOL),
-        (DAIKIN_HVAC_MODE_AUTO, HVAC_MODE_AUTO),
-        (DAIKIN_HVAC_MODE_OFF, HVAC_MODE_OFF),
-        (DAIKIN_HVAC_MODE_AUXHEAT, HVAC_MODE_HEAT),
+        (DAIKIN_HVAC_MODE_HEAT, HVACMode.HEAT),
+        (DAIKIN_HVAC_MODE_COOL, HVACMode.COOL),
+        (DAIKIN_HVAC_MODE_AUTO, HVACMode.AUTO),
+        (DAIKIN_HVAC_MODE_OFF, HVACMode.OFF),
+        (DAIKIN_HVAC_MODE_AUXHEAT, HVACMode.HEAT),
     ]
 )
 
@@ -146,11 +139,11 @@ FAN_TO_DAIKIN_FAN = collections.OrderedDict(
 
 DAIKIN_HVAC_ACTION_TO_HASS = {
     # Map to None if we do not know how to represent.
-    1: CURRENT_HVAC_COOL,
-    3: CURRENT_HVAC_HEAT,
-    4: CURRENT_HVAC_FAN,
-    2: CURRENT_HVAC_DRY,
-    5: CURRENT_HVAC_IDLE,
+    1: HVACAction.COOLING,
+    3: HVACAction.HEATING,
+    4: HVACAction.FAN,
+    2: HVACAction.DRYING,
+    5: HVACAction.IDLE,
 }
 
 PRESET_TO_DAIKIN_HOLD = {
@@ -427,12 +420,12 @@ class Thermostat(ClimateEntity):
 
         self._operation_list = []
         if self.thermostat["ctSystemCapHeat"]:
-            self._operation_list.append(HVAC_MODE_HEAT)
+            self._operation_list.append(HVACMode.HEAT)
         if (self.thermostat["ctOutdoorNoofCoolStages"] > 0):
-            self._operation_list.append(HVAC_MODE_COOL)
+            self._operation_list.append(HVACMode.COOL)
         if len(self._operation_list) == 2:
-            self._operation_list.insert(0, HVAC_MODE_AUTO)
-        self._operation_list.append(HVAC_MODE_OFF)
+            self._operation_list.insert(0, HVACMode.AUTO)
+        self._operation_list.append(HVACMode.OFF)
 
         self._preset_modes = {PRESET_SCHEDULE,
                               PRESET_MANUAL,
@@ -495,25 +488,25 @@ class Thermostat(ClimateEntity):
     @property
     def target_temperature_low(self):
         """Return the lower bound temperature we try to reach."""
-        if self.hvac_mode == HVAC_MODE_AUTO:
+        if self.hvac_mode == HVACMode.AUTO:
             return self._heat_setpoint
         return None
 
     @property
     def target_temperature_high(self):
         """Return the upper bound temperature we try to reach."""
-        if self.hvac_mode == HVAC_MODE_AUTO:
+        if self.hvac_mode == HVACMode.AUTO:
             return self._cool_setpoint
         return None
 
     @property
     def target_temperature(self):
         """Return the temperature we try to reach."""
-        if self.hvac_mode == HVAC_MODE_AUTO:
+        if self.hvac_mode == HVACMode.AUTO:
             return None
-        if self.hvac_mode == HVAC_MODE_HEAT:
+        if self.hvac_mode == HVACMode.HEAT:
             return self._heat_setpoint
-        if self.hvac_mode == HVAC_MODE_COOL:
+        if self.hvac_mode == HVACMode.COOL:
             return self._cool_setpoint
         return None
 
@@ -522,7 +515,7 @@ class Thermostat(ClimateEntity):
         """Return the current fan status."""
         if self.thermostat["ctAHFanCurrentDemandStatus"] > 0:
             return STATE_ON
-        return HVAC_MODE_OFF
+        return HVACMode.OFF
 
     @property
     def fan_mode(self):
@@ -719,10 +712,10 @@ class Thermostat(ClimateEntity):
 
     def set_temp_hold(self, temp):
         """Set temperature hold in modes other than auto."""
-        if self.hvac_mode == HVAC_MODE_HEAT:
+        if self.hvac_mode == HVACMode.HEAT:
             heat_temp = temp
             cool_temp = self.thermostat["cspHome"]
-        elif self.hvac_mode == HVAC_MODE_COOL:
+        elif self.hvac_mode == HVACMode.COOL:
             cool_temp = temp
             heat_temp = self.thermostat["hspHome"]
         self.set_auto_temp_hold(heat_temp, cool_temp)
@@ -736,7 +729,7 @@ class Thermostat(ClimateEntity):
         high_temp = kwargs.get(ATTR_TARGET_TEMP_HIGH)
         temp = kwargs.get(ATTR_TEMPERATURE)
 
-        if self.hvac_mode == HVAC_MODE_AUTO and (
+        if self.hvac_mode == HVACMode.AUTO and (
             low_temp is not None or high_temp is not None
         ):
             self.set_auto_temp_hold(low_temp, high_temp)
