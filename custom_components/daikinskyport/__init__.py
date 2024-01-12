@@ -15,6 +15,7 @@ from homeassistant.const import (
     CONF_NAME,
     Platform
 )
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.util import Throttle
@@ -76,7 +77,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         hass, config, unique_id, entry
     )
 
-    await coordinator._async_update_data()
+    try:
+        await coordinator._async_update_data()
+    except ExpiredTokenError as ex:
+        _LOGGER.warn("Unable to refresh auth token.")
+        raise ConfigEntryNotReady("Unable to refresh token.")
     
     if coordinator.daikinskyport.thermostats is None:
         _LOGGER.error("No Daikin Skyport devices found to set up")
