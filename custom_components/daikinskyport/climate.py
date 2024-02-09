@@ -219,6 +219,8 @@ SUPPORT_FLAGS = (
     | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
     | ClimateEntityFeature.FAN_MODE
     | ClimateEntityFeature.AUX_HEAT
+    | ClimateEntityFeature.TURN_ON
+    | ClimateEntityFeature.TURN_OFF
 )
 
 async def async_setup_entry(
@@ -393,6 +395,7 @@ class Thermostat(ClimateEntity):
     _attr_fan_modes = [FAN_AUTO, FAN_ON, FAN_SCHEDULE]
     _attr_name = None
     _attr_has_entity_name = True
+    _enable_turn_on_off_backwards_compatibility = False
 
     def __init__(self, data, thermostat_index, thermostat):
         """Initialize the thermostat."""
