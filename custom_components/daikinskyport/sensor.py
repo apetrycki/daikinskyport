@@ -98,7 +98,7 @@ SENSOR_TYPES = {
         "device_class": SensorDeviceClass.POWER,
         "native_unit_of_measurement": UnitOfPower.WATT,
         "state_class": SensorStateClass.MEASUREMENT,
-        "icon": "mdi:lightning-bolt",
+        "icon": "mdi:power-plug",
     },
     "frequency_percent": {
         "device_class": DEVICE_CLASS_FREQ_PERCENT,
