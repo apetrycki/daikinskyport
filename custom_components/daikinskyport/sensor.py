@@ -5,7 +5,8 @@ from homeassistant.const import (
     CONCENTRATION_PARTS_PER_MILLION,
     CONCENTRATION_PARTS_PER_BILLION,
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
-    UnitOfPower
+    UnitOfPower,
+    UnitOfVolumeFlowRate
 )
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -30,6 +31,7 @@ from .const import (
 DEVICE_CLASS_DEMAND = "demand"
 DEVICE_CLASS_FREQ_PERCENT = "frequency in percent"
 DEVICE_CLASS_ACTUAL_STATUS = "actual"
+DEVICE_CLASS_AIR_FLOW = "airflow"
 
 SENSOR_TYPES = {
     "temperature": {
@@ -110,8 +112,13 @@ SENSOR_TYPES = {
         "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:percent",
     },
+    "airflow": {
+        "device_class": DEVICE_CLASS_AIR_FLOW,
+        "native_unit_of_measurement": UnitOfVolumeFlowRate.CUBIC_FEET_PER_MINUTE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "icon": "mdi:air-filter",
+    },
 }
-
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
@@ -126,8 +133,8 @@ async def async_setup_entry(
         for sensor in sensors:
             if sensor["type"] not in ("temperature", "humidity", "score",
                                       "ozone", "particle", "VOC", "demand",
-                                      "power", "frequency_percent",
-                                      "actual_status") or sensor["value"] == 127.5 or sensor["value"] == 65535:
+                                      "power", "frequency_percent","actual_status",
+                                      "airflow") or sensor["value"] == 127.5 or sensor["value"] == 65535:
                 continue
             async_add_entities([DaikinSkyportSensor(coordinator, sensor["name"], sensor["type"], index)], True)
 
