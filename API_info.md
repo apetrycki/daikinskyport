@@ -199,7 +199,7 @@ Sensors:
 "aqIndoorVOCLevel": TBD
 "ctOutdoorAirTemperature": outdoor unit air temperature (measurement); needs to be divided by 10 and converted from Farenheit to Celcius. i.e., ((ctOutdoorAirTemperature / 10) - 32) * 5 / 9 
 "ctOutdoorPower": outdoor unit power usage; multiply by 10 for Watts
-"ctIndoorPower": indoor unit power usage; usage TBD
+"ctIndoorPower": indoor unit (furnace or air handler) power usage; usage TBD
 "ctIFCIndoorBlowerAirflow; furnace blower aiflow in CFM"
 #Add CFM
 ```
