@@ -7,6 +7,8 @@ This is currently a work in progress but most functions are supported.  Now welc
 
 This component can be installed via the [Home Assistant Community Store (HACS)](https://hacs.xyz/) or manually.
 
+This integration now requires Home Assistant version 2024.02 or later due to changes made in that version that are not backward compatible.
+
 ### Install via HACS
 
 _HACS must be [installed](https://hacs.xyz/docs/installation/prerequisites) before following these steps._
