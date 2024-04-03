@@ -104,13 +104,15 @@ Which returns (truncated):
 
 There are almost 900 elements when I probe my thermostat.  Some abbreviations used when looking at the data:
 ```
-ct = cooling temperature
+ct = current value?
 ht = heating temperature
 sp = set point
 csp = cooling set point
 hsp = heating set point
 sched = schedule
 hum = humidity/humidifier
+AH - Air Handler
+IFC = Indoor Furnace
 ```
 
 How times work:
@@ -195,9 +197,11 @@ Sensors:
 "aq[In/Out]doorValue": AQI score
 "aqIndoorParticlesLevel": TBD
 "aqIndoorVOCLevel": TBD
-"ctOutdoorAirTemperature": outdoor unit air temperature; needs to be divided by 10 and converted from Farenheit to Celcius. i.e., ((ctOutdoorAirTemperature / 10) - 32) * 5 / 9 
+"ctOutdoorAirTemperature": outdoor unit air temperature (measurement); needs to be divided by 10 and converted from Farenheit to Celcius. i.e., ((ctOutdoorAirTemperature / 10) - 32) * 5 / 9 
 "ctOutdoorPower": outdoor unit power usage; multiply by 10 for Watts
 "ctIndoorPower": indoor unit power usage; usage TBD
+"ctIFCIndoorBlowerAirflow; furnace blower aiflow in CFM"
+#Add CFM
 ```
 [n]: Forecast day 1 through 5
 
