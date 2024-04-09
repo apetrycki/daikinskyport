@@ -217,12 +217,11 @@ class DaikinSkyport(object):
         sensors = list()
         thermostat = self.thermostats[index]
         name = thermostat['name']
-        sensors.append({"name":  f"{name} Outdoor", "value": thermostat['tempOutdoor'], "type": "temperature"})
+        sensors.append({"name": f"{name} Outdoor", "value": thermostat['tempOutdoor'], "type": "temperature"})
         sensors.append({"name": f"{name} Outdoor", "value": thermostat['humOutdoor'], "type": "humidity"})
         sensors.append({"name": f"{name} Outdoor fan", "value": round(thermostat['ctOutdoorFanRequestedDemandPercentage'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "demand"})
         sensors.append({"name": f"{name} Outdoor heat pump", "value": round(thermostat['ctOutdoorHeatRequestedDemand'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "demand"})
         sensors.append({"name": f"{name} Outdoor cooling", "value": round(thermostat['ctOutdoorCoolRequestedDemand'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "demand"})
-        sensors.append({"name": f"{name} Outdoor", "value": thermostat['ctOutdoorPower'] * 10, "type": "power"})
         sensors.append({"name": f"{name} Outdoor", "value": round(thermostat['ctOutdoorFrequencyInPercent'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "frequency_percent"})
         sensors.append({"name": f"{name} Indoor", "value": thermostat['tempIndoor'], "type": "temperature"})
         sensors.append({"name": f"{name} Indoor", "value": thermostat['humIndoor'], "type": "humidity"})
@@ -234,10 +233,17 @@ class DaikinSkyport(object):
         sensors.append({"name": f"{name} Indoor furnace", "value": round(thermostat['ctIFCCurrentHeatActualStatus'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "actual_status"})
         sensors.append({"name": f"{name} Indoor humidifier", "value": round(thermostat['ctIFCHumRequestedDemandPercent'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "demand"})
         sensors.append({"name": f"{name} Indoor dehumidifier", "value": round(thermostat['ctIFCDehumRequestedDemandPercent'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "demand"})
-        sensors.append({"name": f"{name} Indoor", "value": thermostat['ctIndoorPower'], "type": "power"})
         sensors.append({"name": f"{name} Outdoor air", "value": round(((thermostat['ctOutdoorAirTemperature'] / 10) - 32) * 5 / 9, 1), "type": "temperature"})
         sensors.append({"name": f"{name} Indoor furnace blower", "value": thermostat['ctIFCIndoorBlowerAirflow'], "type": "airflow"})
         sensors.append({"name": f"{name} Indoor air handler blower", "value": thermostat['ctAHCurrentIndoorAirflow'], "type": "airflow"})
+
+        ''' if equipment is idle, set power to zero rather than accept bogus data '''
+        if thermostat['equipmentStatus'] == 5:
+            sensors.append({"name": f"{name} Indoor", "value": 0, "type": "power"})
+            sensors.append({"name": f"{name} Outdoor", "value": 0, "type": "power"})
+        else:
+            sensors.append({"name": f"{name} Indoor", "value": thermostat['ctIndoorPower'], "type": "power"})
+            sensors.append({"name": f"{name} Outdoor", "value": thermostat['ctOutdoorPower'] * 10, "type": "power"})
 
         if self.thermostats[index]['aqOutdoorAvailable']:
             sensors.append({"name": f"{name} Outdoor", "value": thermostat['aqOutdoorParticles'], "type": "particle"})
@@ -247,7 +253,7 @@ class DaikinSkyport(object):
             sensors.append({"name": f"{name} Indoor", "value": thermostat['aqIndoorParticlesValue'], "type": "particle"})
             sensors.append({"name": f"{name} Indoor", "value": thermostat['aqIndoorValue'], "type": "score"})
             sensors.append({"name": f"{name} Indoor", "value": thermostat['aqIndoorVOCValue'], "type": "VOC"})
-            
+
         return sensors
 
     def write_tokens_to_file(self):
