@@ -240,10 +240,8 @@ class DaikinSkyport(object):
         ''' if equipment is idle, set power to zero rather than accept bogus data '''
         if thermostat['equipmentStatus'] == 5:
             sensors.append({"name": f"{name} Indoor", "value": 0, "type": "power"})
-            sensors.append({"name": f"{name} Outdoor", "value": 0, "type": "power"})
         else:
             sensors.append({"name": f"{name} Indoor", "value": thermostat['ctIndoorPower'], "type": "power"})
-            sensors.append({"name": f"{name} Outdoor", "value": thermostat['ctOutdoorPower'] * 10, "type": "power"})
 
         if self.thermostats[index]['aqOutdoorAvailable']:
             sensors.append({"name": f"{name} Outdoor", "value": thermostat['aqOutdoorParticles'], "type": "particle"})
