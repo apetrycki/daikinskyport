@@ -39,7 +39,7 @@ UNDO_UPDATE_LISTENER = "undo_update_listener"
 
 NETWORK = None
 
-PLATFORMS = [Platform.SENSOR, Platform.WEATHER, Platform.CLIMATE]
+PLATFORMS = [Platform.SENSOR, Platform.WEATHER, Platform.CLIMATE, Platform.SWITCH]
 
 async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up DaikinSkyport as config entry."""

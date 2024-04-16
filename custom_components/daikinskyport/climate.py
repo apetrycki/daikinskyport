@@ -218,7 +218,6 @@ SUPPORT_FLAGS = (
     | ClimateEntityFeature.PRESET_MODE
     | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
     | ClimateEntityFeature.FAN_MODE
-    | ClimateEntityFeature.AUX_HEAT
     | ClimateEntityFeature.TURN_ON
     | ClimateEntityFeature.TURN_OFF
 )
@@ -582,27 +581,6 @@ class Thermostat(ClimateEntity):
             "night_mode_active": self.thermostat["nightModeActive"],
             "night_mode_enabled": self.thermostat["nightModeEnabled"]
         }
-
-    @property
-    def is_aux_heat(self):
-        """Return true if aux heater."""
-        return self.thermostat["mode"] == DAIKIN_HVAC_MODE_AUXHEAT
-
-    def turn_aux_heat_on(self):
-        """Turn emergency heat on"""
-        self.data.daikinskyport.set_hvac_mode(self.thermostat_index, DAIKIN_HVAC_MODE_AUXHEAT)
-        self.update_without_throttle = True
-
-    def turn_aux_heat_off(self):
-        """Turn emergency heat off"""
-        daikin_value = next(
-            (k for k, v in DAIKIN_HVAC_TO_HASS.items() if v == self._hvac_mode), None
-        )
-        if daikin_value is None:
-            _LOGGER.error("Invalid mode for set_hvac_mode: %s", self._hvac_mode)
-            return
-        self.data.daikinskyport.set_hvac_mode(self.thermostat_index, daikin_value)
-        self.update_without_throttle = True
 
     def set_preset_mode(self, preset_mode):
         """Activate a preset."""
