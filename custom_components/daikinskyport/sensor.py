@@ -155,7 +155,7 @@ class DaikinSkyportSensor(SensorEntity):
 
     @property
     def device_info(self) -> DeviceInfo:
-        """Return device information for this ecobee thermostat."""
+        """Return device information for this Daikin Skyport thermostat."""
         return self.data.device_info
 
     @property
