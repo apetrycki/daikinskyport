@@ -218,7 +218,6 @@ SUPPORT_FLAGS = (
     | ClimateEntityFeature.PRESET_MODE
     | ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
     | ClimateEntityFeature.FAN_MODE
-    | ClimateEntityFeature.AUX_HEAT
     | ClimateEntityFeature.TURN_ON
     | ClimateEntityFeature.TURN_OFF
 )
