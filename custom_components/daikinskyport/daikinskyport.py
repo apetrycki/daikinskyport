@@ -50,6 +50,7 @@ class DaikinSkyport(object):
         self.thermostats = list()
         self.thermostatlist = list()
         self.authenticated = False
+        self.skip_next = False
 
         if config is None:
             self.file_based_config = True
@@ -269,11 +270,15 @@ class DaikinSkyport(object):
 
     def update(self):
         ''' Get new thermostat data from daikin skyport '''
-        sleep(3)
+        if self.skip_next:
+            logger.debug("Skipping update due to setting change")
+            self.skip_next = False
+            return
         result = self.get_thermostats()
         return result
 
     def make_request(self, index, body, log_msg_action, *, retry_count=0):
+        self.skip_next = True
         deviceID = self.thermostats[index]['id']
         url = 'https://api.daikinskyport.com/deviceData/' + deviceID
         header = {'Content-Type': 'application/json;charset=UTF-8',
@@ -307,6 +312,7 @@ class DaikinSkyport(object):
         ''' possible modes are DAIKIN_HVAC_MODE_{OFF,HEAT,COOL,AUTO,AUXHEAT} '''
         body = {"mode": hvac_mode}
         log_msg_action = "set HVAC mode"
+        self.thermostats[index]["mode"] = hvac_mode
         return self.make_request(index, body, log_msg_action)
 
     def set_thermostat_schedule(self, index, prefix, start, enable, label, heating, cooling):
@@ -331,12 +337,14 @@ class DaikinSkyport(object):
         ''' Set fan mode. Values: auto (0), schedule (2), on (1) '''
         body = {"fanCirculate": fan_mode}
         log_msg_action = "set fan mode"
+        self.thermostats[index]["fanCirculate"] = fan_mode
         return self.make_request(index, body, log_msg_action)
 
     def set_fan_speed(self, index, fan_speed):
         ''' Set fan speed. Values: low (0), medium (1), high (2) '''
         body = {"fanCirculateSpeed": fan_speed}
         log_msg_action = "set fan speed"
+        self.thermostats[index]["fanCirculateSpeed"] = fan_speed
         return self.make_request(index, body, log_msg_action)
 
     def set_fan_clean(self, index, active):
@@ -368,6 +376,10 @@ class DaikinSkyport(object):
                 "schedOverrideDuration": hold_duration
                 }
         log_msg_action = "set hold temp"
+        self.thermostats[index]["hspHome"] = round(heat_temp, 1)
+        self.thermostats[index]["cspHome"] = round(cool_temp, 1)
+        self.thermostats[index]["schedOverride"] = 1
+        self.thermostats[index]["schedOverrideDuration"] = hold_duration
         return self.make_request(index, body, log_msg_action)
 
     def set_permanent_hold(self, index, cool_temp=None, heat_temp=None):
@@ -384,6 +396,10 @@ class DaikinSkyport(object):
                 "schedEnabled": False
                 }
         log_msg_action = "set permanent hold"
+        self.thermostats[index]["hspHome"] = round(heat_temp, 1)
+        self.thermostats[index]["cspHome"] = round(cool_temp, 1)
+        self.thermostats[index]["schedOverride"] = 0
+        self.thermostats[index]["schedEnabled"] = False
         return self.make_request(index, body, log_msg_action)
 
     def set_away(self, index, mode, heat_temp=None, cool_temp=None):
@@ -398,6 +414,9 @@ class DaikinSkyport(object):
                 }
 
         log_msg_action = "set away mode"
+        self.thermostats[index]["geofencingAway"] = mode
+        self.thermostats[index]["hspAway"] = heat_temp
+        self.thermostats[index]["cspAway"] = cool_temp
         return self.make_request(index, body, log_msg_action)
 
     def resume_program(self, index):

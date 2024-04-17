@@ -131,7 +131,7 @@ async def async_reload_entry(hass: HomeAssistant, entry: ConfigEntry) -> None:
 async def update_listener(hass: HomeAssistant, entry: ConfigEntry) -> None:
     """Update listener."""
     _LOGGER.debug("Update listener: %s", str(entry))
-    await hass.config_entries.async_reload(entry.entry_id)
+#    await hass.config_entries.async_reload(entry.entry_id)
 
 
 class DaikinSkyportData:
@@ -164,6 +164,7 @@ class DaikinSkyportData:
         """Update data via library."""
         try:
             current = await self.hass.async_add_executor_job(self.daikinskyport.update)
+            _LOGGER.debug("Daikin Skyport _async_update_data")
         except ExpiredTokenError:
             _LOGGER.debug("Daikin Skyport tokens expired")
             await self.async_refresh()
