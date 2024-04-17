@@ -4,6 +4,7 @@ from typing import Any
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
@@ -20,7 +21,7 @@ from . import DaikinSkyportData
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
-    """Add a Daikin Skyport Weather entity from a config_entry."""
+    """Add a Daikin Skyport Switch entity from a config_entry."""
 
     data = hass.data[DOMAIN][entry.entry_id]
     coordinator: DaikinSkyportData = data[COORDINATOR]
@@ -68,6 +69,10 @@ class DaikinSkyportAuxHeat(SwitchEntity):
             self.data.daikinskyport.set_hvac_mode(self._index, DAIKIN_HVAC_MODE_HEAT)
         self.aux_on = False
         self.async_write_ha_state()
+
+    @property
+    def device_info(self) -> DeviceInfo:
+        return self.data.device_info
 
     async def async_update(self) -> None:
         """Get the latest state of the switch."""
