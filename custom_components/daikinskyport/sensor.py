@@ -152,6 +152,7 @@ class DaikinSkyportSensor(SensorEntity):
         self._index = sensor_index
         self._state = None
         self._native_unit_of_measurement = SENSOR_TYPES[sensor_type]["native_unit_of_measurement"]
+        self._attr_state_class = SENSOR_TYPES[sensor_type]['state_class']
 
     @property
     def device_info(self) -> DeviceInfo:
