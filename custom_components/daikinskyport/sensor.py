@@ -1,11 +1,12 @@
 """Support for Daikin Skyport sensors."""
 from homeassistant.const import (
     PERCENTAGE,
-    TEMP_CELSIUS,
+    UnitOfTemperature,
     CONCENTRATION_PARTS_PER_MILLION,
     CONCENTRATION_PARTS_PER_BILLION,
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
-    POWER_WATT
+    UnitOfPower,
+    UnitOfVolumeFlowRate
 )
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -30,11 +31,12 @@ from .const import (
 DEVICE_CLASS_DEMAND = "demand"
 DEVICE_CLASS_FREQ_PERCENT = "frequency in percent"
 DEVICE_CLASS_ACTUAL_STATUS = "actual"
+DEVICE_CLASS_AIR_FLOW = "airflow"
 
 SENSOR_TYPES = {
     "temperature": {
         "device_class": SensorDeviceClass.TEMPERATURE,
-        "native_unit_of_measurement": TEMP_CELSIUS,
+        "native_unit_of_measurement": UnitOfTemperature.CELSIUS,
         "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:thermometer",
     },
@@ -94,9 +96,9 @@ SENSOR_TYPES = {
     },
     "power": {
         "device_class": SensorDeviceClass.POWER,
-        "native_unit_of_measurement": POWER_WATT,
+        "native_unit_of_measurement": UnitOfPower.WATT,
         "state_class": SensorStateClass.MEASUREMENT,
-        "icon": "mdi:power-plug",
+        "icon": "mdi:lightning-bolt",
     },
     "frequency_percent": {
         "device_class": DEVICE_CLASS_FREQ_PERCENT,
@@ -110,8 +112,13 @@ SENSOR_TYPES = {
         "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:percent",
     },
+    "airflow": {
+        "device_class": DEVICE_CLASS_AIR_FLOW,
+        "native_unit_of_measurement": UnitOfVolumeFlowRate.CUBIC_FEET_PER_MINUTE,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "icon": "mdi:air-filter",
+    },
 }
-
 
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
@@ -126,8 +133,8 @@ async def async_setup_entry(
         for sensor in sensors:
             if sensor["type"] not in ("temperature", "humidity", "score",
                                       "ozone", "particle", "VOC", "demand",
-                                      "power", "frequency_percent",
-                                      "actual_status") or sensor["value"] == 127.5 or sensor["value"] == 65535:
+                                      "power", "frequency_percent","actual_status",
+                                      "airflow") or sensor["value"] == 127.5 or sensor["value"] == 65535:
                 continue
             async_add_entities([DaikinSkyportSensor(coordinator, sensor["name"], sensor["type"], index)], True)
 
@@ -145,10 +152,11 @@ class DaikinSkyportSensor(SensorEntity):
         self._index = sensor_index
         self._state = None
         self._native_unit_of_measurement = SENSOR_TYPES[sensor_type]["native_unit_of_measurement"]
+        self._attr_state_class = SENSOR_TYPES[sensor_type]['state_class']
 
     @property
     def device_info(self) -> DeviceInfo:
-        """Return device information for this ecobee thermostat."""
+        """Return device information for this Daikin Skyport thermostat."""
         return self.data.device_info
 
     @property

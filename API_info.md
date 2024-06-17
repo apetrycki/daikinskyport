@@ -104,13 +104,15 @@ Which returns (truncated):
 
 There are almost 900 elements when I probe my thermostat.  Some abbreviations used when looking at the data:
 ```
-ct = cooling temperature
+ct = current value?
 ht = heating temperature
 sp = set point
 csp = cooling set point
 hsp = heating set point
 sched = schedule
 hum = humidity/humidifier
+AH - Air Handler
+IFC = Indoor Furnace
 ```
 
 How times work:
@@ -158,10 +160,10 @@ Night mode:
 Sensors:
 ```
 "equipmentStatus": the running state of the system, 1=cooling, 2=overcool dehumidifying, 3=heating, 4=fan, 5=idle, 
-“tempIndoor”: current indoor temperature, in C
-“tempOutdoor”: current outdoor temperature, in C
-“humIndoor”: current indoor humidity, in %
-“humOutdoor”: current outdoor humidity, in %
+“tempIndoor”: current indoor temperature, in C (thermostat measurement)
+“humIndoor”: current indoor humidity, in % (thermostat measurement)
+“tempOutdoor”: current outdoor temperature, in C (cloud-based)
+“humOutdoor”: current outdoor humidity, in % (cloud-based)
 "cspActive": current cooling set point, in C
 "hspActive": current heating set point, in C
 "cspSched": current cooling set point for the schedule, in C
@@ -195,6 +197,11 @@ Sensors:
 "aq[In/Out]doorValue": AQI score
 "aqIndoorParticlesLevel": TBD
 "aqIndoorVOCLevel": TBD
+"ctOutdoorAirTemperature": outdoor unit air temperature (measurement); needs to be divided by 10 and converted from Farenheit to Celcius. i.e., ((ctOutdoorAirTemperature / 10) - 32) * 5 / 9 
+"ctOutdoorPower": outdoor unit power usage; multiply by 10 for Watts
+"ctIndoorPower": indoor unit power usage; usage TBD
+"ctIFCIndoorBlowerAirflow; furnace blower aiflow in CFM"
+#Add CFM
 ```
 [n]: Forecast day 1 through 5
 
