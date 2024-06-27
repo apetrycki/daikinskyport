@@ -423,7 +423,8 @@ class Thermostat(ClimateEntity):
         self._operation_list = []
         if self.thermostat["ctSystemCapHeat"]:
             self._operation_list.append(HVACMode.HEAT)
-        if (self.thermostat["ctOutdoorNoofCoolStages"] > 0):
+        if (("ctOutdoorNoofCoolStages" in self.thermostat and self.thermostat["ctOutdoorNoofCoolStages"] > 0)
+        or  ("P1P2S21CoolingCapability" in self.thermostat and self.thermostat["P1P2S21CoolingCapability"] == True)):
             self._operation_list.append(HVACMode.COOL)
         if len(self._operation_list) == 2:
             self._operation_list.insert(0, HVACMode.AUTO)
@@ -515,7 +516,7 @@ class Thermostat(ClimateEntity):
     @property
     def fan(self):
         """Return the current fan status."""
-        if self.thermostat["ctAHFanCurrentDemandStatus"] > 0:
+        if "ctAHFanCurrentDemandStatus" in self.thermostat and self.thermostat["ctAHFanCurrentDemandStatus"] > 0:
             return STATE_ON
         return HVACMode.OFF
 
@@ -563,20 +564,48 @@ class Thermostat(ClimateEntity):
     def extra_state_attributes(self):
         """Return device specific state attributes."""
         status = self.thermostat["equipmentStatus"]
-        if self.thermostat["ctAHCurrentIndoorAirflow"] == 65535:
-            fan_cfm = self.thermostat["ctIFCIndoorBlowerAirflow"]
-        else:
-            fan_cfm = self.thermostat["ctAHCurrentIndoorAirflow"]
+        fan_cfm = "Unavailable"
+        fan_demand = "Unavailable"
+        cooling_demand = "Unavailable"
+        heating_demand = "Unavailable"
+        heatpump_demand = "Unavailable"
+        dehumidification_demand = "Unavailable"
+        humidification_demand = "Unavailable"
+        
+        if "ctAHCurrentIndoorAirflow" in self.thermostat: 
+            if self.thermostat["ctAHCurrentIndoorAirflow"] == 65535:
+                fan_cfm = self.thermostat["ctIFCIndoorBlowerAirflow"]
+            else:
+                fan_cfm = self.thermostat["ctAHCurrentIndoorAirflow"]
+        
+        if "ctAHFanCurrentDemandStatus" in self.thermostat:
+            fan_demand = round(self.thermostat["ctAHFanCurrentDemandStatus"] / 2, 1)
+            
+        if "ctOutdoorCoolRequestedDemand" in self.thermostat:
+            cooling_demand = round(self.thermostat["ctOutdoorCoolRequestedDemand"] / 2, 1)
+
+        if "ctAHHeatRequestedDemand" in self.thermostat:
+            heating_demand = round(self.thermostat["ctAHHeatRequestedDemand"] / 2, 1)
+
+        if "ctOutdoorHeatRequestedDemand" in self.thermostat:
+            heatpump_demand = round(self.thermostat["ctOutdoorHeatRequestedDemand"] / 2, 1)
+
+        if "ctOutdoorDeHumidificationRequestedDemand" in self.thermostat:
+            dehumidification_demand = round(self.thermostat["ctOutdoorDeHumidificationRequestedDemand"] / 2, 1)
+
+        if "ctAHHumidificationRequestedDemand" in self.thermostat:
+            humidification_demand = round(self.thermostat["ctAHHumidificationRequestedDemand"] / 2, 1)
+
         return {
             "fan": self.fan,
             "schedule_mode": self.thermostat["schedEnabled"],
             "fan_cfm": fan_cfm,
-            "fan_demand": round(self.thermostat["ctAHFanCurrentDemandStatus"] / 2, 1),
-            "cooling_demand": round(self.thermostat["ctOutdoorCoolRequestedDemand"] / 2, 1),
-            "heating_demand": round(self.thermostat["ctAHHeatRequestedDemand"] / 2, 1),
-            "heatpump_demand": round(self.thermostat["ctOutdoorHeatRequestedDemand"] / 2, 1),
-            "dehumidification_demand": round(self.thermostat["ctOutdoorDeHumidificationRequestedDemand"] / 2, 1),
-            "humidification_demand": round(self.thermostat["ctAHHumidificationRequestedDemand"] / 2, 1),
+            "fan_demand": fan_demand,
+            "cooling_demand": cooling_demand,
+            "heating_demand": heating_demand,
+            "heatpump_demand": heatpump_demand,
+            "dehumidification_demand": dehumidification_demand,
+            "humidification_demand": humidification_demand,
             "thermostat_version": self.thermostat["statFirmware"],
             "night_mode_active": self.thermostat["nightModeActive"],
             "night_mode_enabled": self.thermostat["nightModeEnabled"]
