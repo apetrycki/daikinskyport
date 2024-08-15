@@ -391,7 +391,7 @@ class Thermostat(ClimateEntity):
 
     _attr_precision = PRECISION_TENTHS
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
-    _attr_fan_modes = [FAN_AUTO, FAN_ON, FAN_SCHEDULE]
+    _attr_fan_modes = [FAN_AUTO, FAN_ON, FAN_LOW, FAN_MEDIUM, FAN_HIGH, FAN_SCHEDULE]
     _attr_name = None
     _attr_has_entity_name = True
     _enable_turn_on_off_backwards_compatibility = False
@@ -406,7 +406,7 @@ class Thermostat(ClimateEntity):
         self._cool_setpoint = self.thermostat["cspActive"]
         self._heat_setpoint = self.thermostat["hspActive"]
         self._hvac_mode = DAIKIN_HVAC_TO_HASS[self.thermostat["mode"]]
-        if DAIKIN_FAN_TO_HASS[self.thermostat["mode"]] == FAN_ON:
+        if DAIKIN_FAN_TO_HASS[self.thermostat["fanCirculate"]] == FAN_ON:
             self._fan_mode = DAIKIN_FAN_TO_HASS[self.thermostat["fanCirculateSpeed"] + 3]
         else:
             self._fan_mode = DAIKIN_FAN_TO_HASS[self.thermostat["fanCirculate"]]
@@ -450,7 +450,7 @@ class Thermostat(ClimateEntity):
         self._cool_setpoint = self.thermostat["cspActive"]
         self._heat_setpoint = self.thermostat["hspActive"]
         self._hvac_mode = DAIKIN_HVAC_TO_HASS[self.thermostat["mode"]]
-        if DAIKIN_FAN_TO_HASS[self.thermostat["mode"]] == FAN_ON:
+        if DAIKIN_FAN_TO_HASS[self.thermostat["fanCirculate"]] == FAN_ON:
             self._fan_mode = DAIKIN_FAN_TO_HASS[self.thermostat["fanCirculateSpeed"] + 3]
         else:
             self._fan_mode = DAIKIN_FAN_TO_HASS[self.thermostat["fanCirculate"]]
@@ -682,7 +682,7 @@ class Thermostat(ClimateEntity):
         self.update_without_throttle = True
 
     def set_fan_mode(self, fan_mode):
-        """Set the fan mode.  Valid values are "on" or "auto"."""
+        """Set the fan mode.  Valid values are "on", "auto", or "schedule"."""
         if fan_mode in {FAN_ON, FAN_AUTO, FAN_SCHEDULE}:
             self.data.daikinskyport.set_fan_mode(
                 self.thermostat_index,
@@ -715,7 +715,7 @@ class Thermostat(ClimateEntity):
 
             _LOGGER.debug("Setting fan speed to: %s", self._fan_speed)
         else:
-            error = "Invalid fan_mode value:  Valid values are 'on' or 'auto'"
+            error = "Invalid fan_mode value:  Valid values are 'on', 'auto', or 'schedule'"
             _LOGGER.error(error)
             return
 
