@@ -1,7 +1,7 @@
 # daikinskyport
-API and [Home Assistant](https://www.home-assistant.io/) component for accessing a [Daikin One+ Smart Thermostat](https://daikinone.com/).
+API and [Home Assistant](https://www.home-assistant.io/) component for accessing a [Daikin One+ Smart Thermostat](https://daikinone.com/) or [Daikin One Lite](https://www.daikinac.com/content/residential/residential-controllers/daikin-one-lite).
 
-This is currently a work in progress but most functions are supported.  Now welcoming feedback for features and bugs.  This was mostly taken from the ecobee code and modified.
+Most functions are supported.  Now welcoming feedback for features and bugs.  This was mostly taken from the ecobee code and modified.
 
 ## Installation
 

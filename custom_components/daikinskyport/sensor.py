@@ -192,4 +192,5 @@ class DaikinSkyportSensor(SensorEntity):
         sensors = self.data.daikinskyport.get_sensors(self._index)
         for sensor in sensors:
             if sensor["type"] == self._type and self._sensor_name == sensor["name"]:
-                self._state = sensor["value"]
+                if not sensor["value"] == 65535 and not sensor["value"] == 655350:
+                    self._state = sensor["value"]
