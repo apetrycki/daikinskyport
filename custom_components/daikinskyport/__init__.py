@@ -90,7 +90,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 #    entry.async_on_unload(entry.add_update_listener(update_listener))
 
 
-    hass.async_create_task(hass.config_entries.async_forward_entry_setups(entry, PLATFORMS))
+    for platform in PLATFORMS:
+        if entry.options.get(platform, True):
+            coordinator.platforms.append(platform)
 
     undo_listener = entry.add_update_listener(update_listener)
 
@@ -98,6 +100,9 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         COORDINATOR: coordinator,
         UNDO_UPDATE_LISTENER: undo_listener
     }
+
+    await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
+
     return True
 
 async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:

@@ -190,7 +190,7 @@ class DaikinSkyport(object):
             request.raise_for_status()
         except requests.exceptions.HTTPError as e:
             if e.response.status_code == 400 and e.response.json().get("message") == "DeviceOfflineException":
-                logger.warn("Device is offline.")
+                logger.warn("Device is offline: %s", deviceid)
                 self.authenticated = True
                 return None
             else:
@@ -220,29 +220,47 @@ class DaikinSkyport(object):
         name = thermostat['name']
         sensors.append({"name": f"{name} Outdoor", "value": thermostat['tempOutdoor'], "type": "temperature"})
         sensors.append({"name": f"{name} Outdoor", "value": thermostat['humOutdoor'], "type": "humidity"})
-        sensors.append({"name": f"{name} Outdoor fan", "value": round(thermostat['ctOutdoorFanRequestedDemandPercentage'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "demand"})
-        sensors.append({"name": f"{name} Outdoor heat pump", "value": round(thermostat['ctOutdoorHeatRequestedDemand'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "demand"})
-        sensors.append({"name": f"{name} Outdoor cooling", "value": round(thermostat['ctOutdoorCoolRequestedDemand'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "demand"})
-        sensors.append({"name": f"{name} Outdoor", "value": thermostat['ctOutdoorPower'] * 10, "type": "power"})
-        sensors.append({"name": f"{name} Outdoor", "value": round(thermostat['ctOutdoorFrequencyInPercent'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "frequency_percent"})
-        sensors.append({"name": f"{name} Indoor", "value": thermostat['tempIndoor'], "type": "temperature"})
-        sensors.append({"name": f"{name} Indoor", "value": thermostat['humIndoor'], "type": "humidity"})
-        sensors.append({"name": f"{name} Indoor fan", "value": round(thermostat['ctIFCFanRequestedDemandPercent'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "demand"})
-        sensors.append({"name": f"{name} Indoor fan", "value": round(thermostat['ctIFCCurrentFanActualStatus'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "actual_status"})
-        sensors.append({"name": f"{name} Indoor cooling", "value": round(thermostat['ctIFCCoolRequestedDemandPercent'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "demand"})
-        sensors.append({"name": f"{name} Indoor cooling", "value": round(thermostat['ctIFCCurrentCoolActualStatus'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "actual_status"})
-        sensors.append({"name": f"{name} Indoor furnace", "value": round(thermostat['ctIFCHeatRequestedDemandPercent'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "demand"})
-        sensors.append({"name": f"{name} Indoor furnace", "value": round(thermostat['ctIFCCurrentHeatActualStatus'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "actual_status"})
-        sensors.append({"name": f"{name} Indoor humidifier", "value": round(thermostat['ctIFCHumRequestedDemandPercent'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "demand"})
-        sensors.append({"name": f"{name} Indoor dehumidifier", "value": round(thermostat['ctIFCDehumRequestedDemandPercent'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "demand"})
-        sensors.append({"name": f"{name} Outdoor air", "value": round(((thermostat['ctOutdoorAirTemperature'] / 10) - 32) * 5 / 9, 1), "type": "temperature"})
-        sensors.append({"name": f"{name} Indoor furnace blower", "value": thermostat['ctIFCIndoorBlowerAirflow'], "type": "airflow"})
-        sensors.append({"name": f"{name} Indoor air handler blower", "value": thermostat['ctAHCurrentIndoorAirflow'], "type": "airflow"})
+        if "ctOutdoorFanRequestedDemandPercentage" in thermostat:
+            sensors.append({"name": f"{name} Outdoor fan", "value": round(thermostat['ctOutdoorFanRequestedDemandPercentage'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "demand"})
+        if "ctOutdoorHeatRequestedDemand" in thermostat:
+            sensors.append({"name": f"{name} Outdoor heat pump", "value": round(thermostat['ctOutdoorHeatRequestedDemand'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "demand"})
+        if "ctOutdoorCoolRequestedDemand" in thermostat:
+            sensors.append({"name": f"{name} Outdoor cooling", "value": round(thermostat['ctOutdoorCoolRequestedDemand'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "demand"})
+        if "ctOutdoorPower" in thermostat:
+            sensors.append({"name": f"{name} Outdoor", "value": thermostat['ctOutdoorPower'] * 10, "type": "power"})
+        if "ctOutdoorFrequencyInPercent" in thermostat:
+            sensors.append({"name": f"{name} Outdoor", "value": round(thermostat['ctOutdoorFrequencyInPercent'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "frequency_percent"})
+        if "tempIndoor" in thermostat:
+            sensors.append({"name": f"{name} Indoor", "value": thermostat['tempIndoor'], "type": "temperature"})
+        if "humIndoor" in thermostat:
+            sensors.append({"name": f"{name} Indoor", "value": thermostat['humIndoor'], "type": "humidity"})
+        if "ctIFCFanRequestedDemandPercent" in thermostat:
+            sensors.append({"name": f"{name} Indoor fan", "value": round(thermostat['ctIFCFanRequestedDemandPercent'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "demand"})
+        if "ctIFCCurrentFanActualStatus" in thermostat:
+            sensors.append({"name": f"{name} Indoor fan", "value": round(thermostat['ctIFCCurrentFanActualStatus'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "actual_status"})
+        if "ctIFCCoolRequestedDemandPercent" in thermostat:
+            sensors.append({"name": f"{name} Indoor cooling", "value": round(thermostat['ctIFCCoolRequestedDemandPercent'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "demand"})
+        if "ctIFCCurrentCoolActualStatus" in thermostat:
+            sensors.append({"name": f"{name} Indoor cooling", "value": round(thermostat['ctIFCCurrentCoolActualStatus'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "actual_status"})
+        if "ctIFCHeatRequestedDemandPercent" in thermostat:
+            sensors.append({"name": f"{name} Indoor furnace", "value": round(thermostat['ctIFCHeatRequestedDemandPercent'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "demand"})
+        if "ctIFCCurrentHeatActualStatus" in thermostat:
+            sensors.append({"name": f"{name} Indoor furnace", "value": round(thermostat['ctIFCCurrentHeatActualStatus'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "actual_status"})
+        if "ctIFCHumRequestedDemandPercent" in thermostat:
+            sensors.append({"name": f"{name} Indoor humidifier", "value": round(thermostat['ctIFCHumRequestedDemandPercent'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "demand"})
+        if "ctIFCDehumRequestedDemandPercent" in thermostat:
+            sensors.append({"name": f"{name} Indoor dehumidifier", "value": round(thermostat['ctIFCDehumRequestedDemandPercent'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "demand"})
+        if "ctOutdoorAirTemperature" in thermostat:
+            sensors.append({"name": f"{name} Outdoor air", "value": round(((thermostat['ctOutdoorAirTemperature'] / 10) - 32) * 5 / 9, 1), "type": "temperature"})
+        if "ctIFCIndoorBlowerAirflow" in thermostat:
+            sensors.append({"name": f"{name} Indoor furnace blower", "value": thermostat['ctIFCIndoorBlowerAirflow'], "type": "airflow"})
+        if "ctAHCurrentIndoorAirflow" in thermostat:
+            sensors.append({"name": f"{name} Indoor air handler blower", "value": thermostat['ctAHCurrentIndoorAirflow'], "type": "airflow"})
 
         ''' if equipment is idle, set power to zero rather than accept bogus data '''
         if thermostat['equipmentStatus'] == 5:
             sensors.append({"name": f"{name} Indoor", "value": 0, "type": "power"})
-        else:
+        elif "ctIndoorPower" in thermostat:
             sensors.append({"name": f"{name} Indoor", "value": thermostat['ctIndoorPower'], "type": "power"})
 
 
