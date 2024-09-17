@@ -571,7 +571,8 @@ class Thermostat(ClimateEntity):
         heatpump_demand = "Unavailable"
         dehumidification_demand = "Unavailable"
         humidification_demand = "Unavailable"
-        
+        indoor_mode = "Unavailable"
+
         if "ctAHCurrentIndoorAirflow" in self.thermostat: 
             if self.thermostat["ctAHCurrentIndoorAirflow"] == 65535:
                 fan_cfm = self.thermostat["ctIFCIndoorBlowerAirflow"]
@@ -596,6 +597,11 @@ class Thermostat(ClimateEntity):
         if "ctAHHumidificationRequestedDemand" in self.thermostat:
             humidification_demand = round(self.thermostat["ctAHHumidificationRequestedDemand"] / 2, 1)
 
+        if self.thermostat["ctAHUnitType"] != 255:
+            indoor_mode=self.thermostat["ctAHMode"].strip()
+        elif self.thermostat["ctIFCUnitType"] != 255:
+            indoor_mode=self.thermostat["ctIFCOperatingHeatCoolMode"].strip()
+
         return {
             "fan": self.fan,
             "schedule_mode": self.thermostat["schedEnabled"],
@@ -609,12 +615,12 @@ class Thermostat(ClimateEntity):
             "thermostat_version": self.thermostat["statFirmware"],
             "night_mode_active": self.thermostat["nightModeActive"],
             "night_mode_enabled": self.thermostat["nightModeEnabled"],
-            "furnace_mode": self.thermostat["ctIFCOperatingHeatCoolMode"],
-            "heatpump_mode": self.thermostat["ctOutdoorMode"],
-            "thermostat_locked": int(self.thermostat["displayLockPIN"] != 0),
-            "filter_days": self.thermostat["alertMediaAirFilterDays"]
-
+            "indoor_mode": indoor_mode,
+            "outdoor_mode": self.thermostat["ctOutdoorMode"].strip(),
+            "thermostat_unlocked": bool(self.thermostat["displayLockPIN"] == 0),
+            "media_filter_days": self.thermostat["alertMediaAirFilterDays"]
         }
+
 
     def set_preset_mode(self, preset_mode):
         """Activate a preset."""
