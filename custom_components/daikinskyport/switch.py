@@ -59,7 +59,7 @@ class DaikinSkyportAuxHeat(SwitchEntity):
         send_command = self.data.daikinskyport.set_hvac_mode(self._index, DAIKIN_HVAC_MODE_AUXHEAT)
         if send_command:
             self.aux_on = True
-            self.async_write_ha_state()
+            self.schedule_update_ha_state()
         else:
             raise HomeAssistantError(f"Error {send_command}: Failed to turn on {self._name}")
 
@@ -68,7 +68,7 @@ class DaikinSkyportAuxHeat(SwitchEntity):
         if self.data.daikinskyport.get_thermostat(self._index)['mode'] == DAIKIN_HVAC_MODE_AUXHEAT:
             self.data.daikinskyport.set_hvac_mode(self._index, DAIKIN_HVAC_MODE_HEAT)
         self.aux_on = False
-        self.async_write_ha_state()
+        self.schedule_update_ha_state()
 
     @property
     def device_info(self) -> DeviceInfo:
