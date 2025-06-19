@@ -29,6 +29,7 @@ from .const import (
 )
 
 DEVICE_CLASS_DEMAND = "demand"
+DEVICE_CLASS_FAULT_CODE = "Code"
 DEVICE_CLASS_FREQ_PERCENT = "frequency in percent"
 DEVICE_CLASS_ACTUAL_STATUS = "actual"
 DEVICE_CLASS_AIR_FLOW = "airflow"
@@ -118,6 +119,12 @@ SENSOR_TYPES = {
         "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:air-filter",
     },
+    "fault_code": {
+        "device_class": DEVICE_CLASS_FAULT_CODE,
+        "native_unit_of_measurement": None,
+        "state_class": SensorStateClass.MEASUREMENT,
+        "icon": "mdi:alert-circle",
+    },
 }
 
 async def async_setup_entry(
@@ -134,7 +141,7 @@ async def async_setup_entry(
             if sensor["type"] not in ("temperature", "humidity", "score",
                                       "ozone", "particle", "VOC", "demand",
                                       "power", "frequency_percent","actual_status",
-                                      "airflow") or sensor["value"] == 127.5 or sensor["value"] == 65535:
+                                      "airflow", "fault_code") or sensor["value"] == 127.5 or sensor["value"] == 65535:
                 continue
             async_add_entities([DaikinSkyportSensor(coordinator, sensor["name"], sensor["type"], index)], True)
 
@@ -192,5 +199,9 @@ class DaikinSkyportSensor(SensorEntity):
         sensors = self.data.daikinskyport.get_sensors(self._index)
         for sensor in sensors:
             if sensor["type"] == self._type and self._sensor_name == sensor["name"]:
-                if not sensor["value"] == 65535 and not sensor["value"] == 655350:
+                # A fault code of 255 indicates that piece of equipment (eg, the air
+                # handler) is not present and therefore has no valid state.
+                if sensor["type"] == "fault_code" and sensor["value"] == 255:
+                    self._state = None
+                elif not sensor["value"] == 65535 and not sensor["value"] == 655350:
                     self._state = sensor["value"]
