@@ -203,7 +203,10 @@ class DaikinSkyportSensor(SensorEntity):
                 # handler) is not present and therefore has no valid state. Experience
                 # shows that 255 also indicates an issue with the component. In
                 # either case, we do not return any value for the sensor.
-                if sensor["type"] == "fault_code" and sensor["value"] != 255:
-                    self._state = sensor["value"]
+                if sensor["type"] == "fault_code":
+                    if sensor["value"] == 255:
+                        continue
+                    else:
+                        self._state = sensor["value"]
                 elif not sensor["value"] == 65535 and not sensor["value"] == 655350:
                     self._state = sensor["value"]
