@@ -201,6 +201,16 @@ Sensors:
 "ctOutdoorPower": outdoor unit power usage; multiply by 10 for Watts
 "ctIndoorPower": indoor unit power usage; usage TBD
 "ctIFCIndoorBlowerAirflow; furnace blower aiflow in CFM"
+"ctAHCriticalFault": Air Handler Critical Fault Code (in decimal)
+"ctAHMinorFault": Air Handler Minor Fault Code (in decimal)
+"ctEEVCoilCriticalFault": EEV Coil Critical Fault Code (in decimal)
+"ctEEVCoilMinorFault": EEV Coil Minor Fault Code (in decimal)
+"ctIFCCriticalFault": Indoor Furnace Critical Fault Code (in decimal)
+"ctIFCMinorFault": Indoor Furnace Minor Fault Code (in decimal)
+"ctOutdoorCriticalFault": Outdoor Critical Fault Code (in decimal)
+"ctOutdoorMinorFault": Outdoor Minor Fault Code (in decimal)
+"ctStatCriticalFault": Thermostat Critical Fault Code (in decimal)
+"ctStatMinorFault": Thermostat Minor Fault Code (in decimal)
 #Add CFM
 ```
 [n]: Forecast day 1 through 5

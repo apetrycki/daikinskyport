@@ -273,6 +273,23 @@ class DaikinSkyport(object):
             sensors.append({"name": f"{name} Indoor", "value": thermostat['aqIndoorValue'], "type": "score"})
             sensors.append({"name": f"{name} Indoor", "value": thermostat['aqIndoorVOCValue'], "type": "VOC"})
 
+        fault_sensors = [
+            ("ctAHCriticalFault", "Air Handler Critical Fault"),
+            ("ctAHMinorFault", "Air Handler Minor Fault"),
+            ("ctEEVCoilCriticalFault", "EEV Coil Critical Fault"),
+            ("ctEEVCoilMinorFault", "EEV Coil Minor Fault"),
+            ("ctIFCCriticalFault", "Indoor Furnace Critical Fault"),
+            ("ctIFCMinorFault", "Indoor Furnace Minor Fault"),
+            ("ctOutdoorCriticalFault", "Outdoor Critical Fault"),
+            ("ctOutdoorMinorFault", "Outdoor Minor Fault"),
+            ("ctStatCriticalFault", "Thermostat Critical Fault"),
+            ("ctStatMinorFault", "Thermostat Minor Fault"),
+        ]
+
+        for fault_key, fault_name in fault_sensors:
+            if fault_key in thermostat:
+                sensors.append({"name": f"{name} {fault_name}", "value": thermostat[fault_key], "type": "fault_code"})
+
         return sensors
 
     def write_tokens_to_file(self):
