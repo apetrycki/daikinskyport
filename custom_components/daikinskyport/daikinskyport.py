@@ -110,7 +110,7 @@ class DaikinSkyport(object):
         else:
             logger.error('Error while requesting tokens from daikinskyport.com.'
                         ' Status code: %s Message: %s', request.status_code, request.text)
-            return
+            return False
 
     def refresh_tokens(self):
         ''' Method to refresh API tokens from daikinskyport.com '''
