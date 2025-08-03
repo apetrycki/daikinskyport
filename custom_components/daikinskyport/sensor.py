@@ -1,4 +1,5 @@
 """Support for Daikin Skyport sensors."""
+
 from homeassistant.const import (
     PERCENTAGE,
     UnitOfTemperature,
@@ -6,7 +7,7 @@ from homeassistant.const import (
     CONCENTRATION_PARTS_PER_BILLION,
     CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
     UnitOfPower,
-    UnitOfVolumeFlowRate
+    UnitOfVolumeFlowRate,
 )
 from homeassistant.components.sensor import (
     SensorDeviceClass,
@@ -135,12 +136,34 @@ async def async_setup_entry(
     for index in range(len(coordinator.daikinskyport.thermostats)):
         sensors = coordinator.daikinskyport.get_sensors(index)
         for sensor in sensors:
-            if sensor["type"] not in ("temperature", "humidity", "score",
-                                      "ozone", "particle", "VOC", "demand",
-                                      "power", "frequency_percent", "actual_status",
-                                      "airflow", "fault_code") or sensor["value"] == 127.5 or sensor["value"] == 65535:
+            if (
+                sensor["type"]
+                not in (
+                    "temperature",
+                    "humidity",
+                    "score",
+                    "ozone",
+                    "particle",
+                    "VOC",
+                    "demand",
+                    "power",
+                    "frequency_percent",
+                    "actual_status",
+                    "airflow",
+                    "fault_code",
+                )
+                or sensor["value"] == 127.5
+                or sensor["value"] == 65535
+            ):
                 continue
-            async_add_entities([DaikinSkyportSensor(coordinator, sensor["name"], sensor["type"], index)], True)
+            async_add_entities(
+                [
+                    DaikinSkyportSensor(
+                        coordinator, sensor["name"], sensor["type"], index
+                    )
+                ],
+                True,
+            )
 
 
 class DaikinSkyportSensor(SensorEntity):
@@ -150,14 +173,18 @@ class DaikinSkyportSensor(SensorEntity):
         """Initialize the sensor."""
         self.data = data
         self._name = f"{sensor_name} {SENSOR_TYPES[sensor_type]['device_class']}"
-        self._attr_unique_id = f"{data.daikinskyport.thermostats[sensor_index]['id']}-{self._name}"
+        self._attr_unique_id = (
+            f"{data.daikinskyport.thermostats[sensor_index]['id']}-{self._name}"
+        )
         self._model = f"{data.daikinskyport.thermostats[sensor_index]['model']}"
         self._sensor_name = sensor_name
         self._type = sensor_type
         self._index = sensor_index
         self._state = None
-        self._native_unit_of_measurement = SENSOR_TYPES[sensor_type]["native_unit_of_measurement"]
-        self._attr_state_class = SENSOR_TYPES[sensor_type]['state_class']
+        self._native_unit_of_measurement = SENSOR_TYPES[sensor_type][
+            "native_unit_of_measurement"
+        ]
+        self._attr_state_class = SENSOR_TYPES[sensor_type]["state_class"]
 
     @property
     def device_info(self) -> DeviceInfo:

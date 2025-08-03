@@ -1,4 +1,5 @@
 """Daikin Skyport integration."""
+
 from datetime import timedelta
 
 from homeassistant.exceptions import ConfigEntryNotReady

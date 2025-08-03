@@ -1,4 +1,5 @@
 """Daikin Skyport switch"""
+
 from typing import Any
 
 from homeassistant.components.switch import SwitchEntity
@@ -14,7 +15,7 @@ from .const import (
     COORDINATOR,
     DOMAIN,
     DAIKIN_HVAC_MODE_AUXHEAT,
-    DAIKIN_HVAC_MODE_HEAT
+    DAIKIN_HVAC_MODE_HEAT,
 )
 from . import DaikinSkyportData
 
@@ -29,7 +30,9 @@ async def async_setup_entry(
 
     for index in range(len(coordinator.daikinskyport.thermostats)):
         thermostat = coordinator.daikinskyport.get_thermostat(index)
-        async_add_entities([DaikinSkyportAuxHeat(coordinator, thermostat["name"], index)], True)
+        async_add_entities(
+            [DaikinSkyportAuxHeat(coordinator, thermostat["name"], index)], True
+        )
 
 
 class DaikinSkyportAuxHeat(SwitchEntity):
@@ -42,7 +45,9 @@ class DaikinSkyportAuxHeat(SwitchEntity):
         """Initialize the Daikin Skyport aux_heat platform."""
         self.data = data
         self._name = f"{name} Aux Heat"
-        self._attr_unique_id = f"{data.daikinskyport.thermostats[index]['id']}-{self._name}"
+        self._attr_unique_id = (
+            f"{data.daikinskyport.thermostats[index]['id']}-{self._name}"
+        )
         self._index = index
         self.aux_on = False
 
@@ -58,16 +63,23 @@ class DaikinSkyportAuxHeat(SwitchEntity):
 
     def turn_on(self, **kwargs: Any) -> None:
         """Turn on the switch."""
-        send_command = self.data.daikinskyport.set_hvac_mode(self._index, DAIKIN_HVAC_MODE_AUXHEAT)
+        send_command = self.data.daikinskyport.set_hvac_mode(
+            self._index, DAIKIN_HVAC_MODE_AUXHEAT
+        )
         if send_command:
             self.aux_on = True
             self.schedule_update_ha_state()
         else:
-            raise HomeAssistantError(f"Error {send_command}: Failed to turn on {self._name}")
+            raise HomeAssistantError(
+                f"Error {send_command}: Failed to turn on {self._name}"
+            )
 
     def turn_off(self, **kwargs: Any) -> None:
         """Turn off the switch."""
-        if self.data.daikinskyport.get_thermostat(self._index)['mode'] == DAIKIN_HVAC_MODE_AUXHEAT:
+        if (
+            self.data.daikinskyport.get_thermostat(self._index)["mode"]
+            == DAIKIN_HVAC_MODE_AUXHEAT
+        ):
             self.data.daikinskyport.set_hvac_mode(self._index, DAIKIN_HVAC_MODE_HEAT)
         self.aux_on = False
         self.schedule_update_ha_state()
@@ -81,7 +93,7 @@ class DaikinSkyportAuxHeat(SwitchEntity):
         _LOGGER.debug("Updating switch entity")
         await self.data._async_update_data()
         thermostat = self.data.daikinskyport.get_thermostat(self._index)
-        if thermostat['mode'] == DAIKIN_HVAC_MODE_AUXHEAT:
+        if thermostat["mode"] == DAIKIN_HVAC_MODE_AUXHEAT:
             self.aux_on = True
         else:
             self.aux_on = False
