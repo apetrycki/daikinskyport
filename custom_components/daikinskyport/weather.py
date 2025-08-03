@@ -4,29 +4,22 @@ from datetime import timedelta
 
 from homeassistant.components.weather import (
     ATTR_FORECAST_CONDITION,
-    ATTR_FORECAST_NATIVE_TEMP,
     ATTR_FORECAST_HUMIDITY,
+    ATTR_FORECAST_NATIVE_TEMP,
     ATTR_FORECAST_TIME,
     Forecast,
     WeatherEntity,
     WeatherEntityFeature,
 )
-from homeassistant.const import (
-    UnitOfTemperature,
-)
-from homeassistant.util import dt as dt_util
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import UnitOfTemperature
+from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.core import HomeAssistant
-from homeassistant.config_entries import ConfigEntry
+from homeassistant.util import dt as dt_util
 
-from .const import (
-    _LOGGER,
-    DAIKIN_WEATHER_ICON_TO_HASS,
-    COORDINATOR,
-    DOMAIN,
-)
 from . import DaikinSkyportData
+from .const import _LOGGER, COORDINATOR, DAIKIN_WEATHER_ICON_TO_HASS, DOMAIN
 
 
 async def async_setup_entry(

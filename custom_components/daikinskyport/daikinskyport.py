@@ -1,12 +1,12 @@
 """Python Code for Communication with the Daikin Skyport Thermostat.  This is taken mostly from pyecobee, so much credit to those contributors"""
 
-import requests
 import json
-import os
 import logging
+import os
 
-from requests.exceptions import RequestException
+import requests
 from requests.adapters import HTTPAdapter
+from requests.exceptions import RequestException
 from requests.packages.urllib3.util.retry import Retry
 
 from .const import DAIKIN_PERCENT_MULTIPLIER

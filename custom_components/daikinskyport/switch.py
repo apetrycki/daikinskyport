@@ -5,19 +5,18 @@ from typing import Any
 from homeassistant.components.switch import SwitchEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
-
+from . import DaikinSkyportData
 from .const import (
     _LOGGER,
     COORDINATOR,
-    DOMAIN,
     DAIKIN_HVAC_MODE_AUXHEAT,
     DAIKIN_HVAC_MODE_HEAT,
+    DOMAIN,
 )
-from . import DaikinSkyportData
 
 
 async def async_setup_entry(

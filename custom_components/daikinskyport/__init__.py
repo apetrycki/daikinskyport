@@ -2,22 +2,22 @@
 
 from datetime import timedelta
 
-from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_EMAIL, CONF_NAME, CONF_PASSWORD, Platform
 from homeassistant.core import HomeAssistant
-from homeassistant.util import Throttle
+from homeassistant.exceptions import ConfigEntryNotReady
 from homeassistant.helpers.entity import DeviceInfo
+from homeassistant.util import Throttle
 
-from .daikinskyport import DaikinSkyport, ExpiredTokenError
 from .const import (
     _LOGGER,
-    DOMAIN,
-    MANUFACTURER,
     CONF_ACCESS_TOKEN,
     CONF_REFRESH_TOKEN,
     COORDINATOR,
+    DOMAIN,
+    MANUFACTURER,
 )
+from .daikinskyport import DaikinSkyport, ExpiredTokenError
 
 MIN_TIME_BETWEEN_UPDATES = timedelta(seconds=30)
 UNDO_UPDATE_LISTENER = "undo_update_listener"
