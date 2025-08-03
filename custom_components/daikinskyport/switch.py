@@ -18,6 +18,7 @@ from .const import (
 )
 from . import DaikinSkyportData
 
+
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
@@ -29,6 +30,7 @@ async def async_setup_entry(
     for index in range(len(coordinator.daikinskyport.thermostats)):
         thermostat = coordinator.daikinskyport.get_thermostat(index)
         async_add_entities([DaikinSkyportAuxHeat(coordinator, thermostat["name"], index)], True)
+
 
 class DaikinSkyportAuxHeat(SwitchEntity):
     """Representation of Daikin Skyport aux_heat data."""

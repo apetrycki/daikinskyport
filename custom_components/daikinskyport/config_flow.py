@@ -1,12 +1,8 @@
 from __future__ import annotations
 
-import asyncio
-from typing import Any
 from requests.exceptions import RequestException
-from async_timeout import timeout
 from homeassistant import config_entries
 from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, CONF_NAME
-from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
@@ -14,12 +10,8 @@ from homeassistant.helpers.schema_config_entry_flow import (
     SchemaFlowFormStep,
     SchemaOptionsFlowHandler,
 )
-from .const import (
-    DOMAIN,
-    CONF_ACCESS_TOKEN,
-    CONF_REFRESH_TOKEN,
-)
-import voluptuous as vol
+
+from .const import CONF_ACCESS_TOKEN, CONF_REFRESH_TOKEN, DOMAIN
 from .daikinskyport import DaikinSkyport
 
 OPTIONS_SCHEMA = vol.Schema(
@@ -31,11 +23,12 @@ OPTIONS_FLOW = {
     "init": SchemaFlowFormStep(OPTIONS_SCHEMA),
 }
 
+
 class DaikinSkyportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     # The schema version of the entries that it creates
     # Home Assistant will call your migrate method if the version changes
     VERSION = 1
-    
+
     async def async_step_user(self, user_input=None):
         self._abort_if_unique_id_configured()
         if user_input is not None:
@@ -59,16 +52,16 @@ class DaikinSkyportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
                   
         return self.async_show_form(
-            step_id="user", 
+            step_id="user",
             data_schema=vol.Schema(
-            {
-                vol.Required(CONF_EMAIL): str,
-                vol.Required(CONF_PASSWORD): str,
-                vol.Optional(CONF_NAME, default="Daikin"): str,
-              }
-        )  
+                {
+                    vol.Required(CONF_EMAIL): str,
+                    vol.Required(CONF_PASSWORD): str,
+                    vol.Optional(CONF_NAME, default="Daikin"): str,
+                }
+            )
         )
-      
+
     @staticmethod
     @callback
     def async_get_options_flow(config_entry: ConfigEntry) -> SchemaOptionsFlowHandler:

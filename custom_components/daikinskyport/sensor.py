@@ -11,11 +11,8 @@ from homeassistant.const import (
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
-    SensorEntityDescription,
     SensorStateClass,
 )
-from homeassistant.helpers.entity import Entity
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.core import HomeAssistant
 from homeassistant.config_entries import ConfigEntry
@@ -23,7 +20,6 @@ from homeassistant.helpers.device_registry import DeviceInfo
 from . import DaikinSkyportData
 
 from .const import (
-    _LOGGER,
     DOMAIN,
     COORDINATOR,
 )
@@ -127,6 +123,7 @@ SENSOR_TYPES = {
     },
 }
 
+
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
@@ -140,10 +137,11 @@ async def async_setup_entry(
         for sensor in sensors:
             if sensor["type"] not in ("temperature", "humidity", "score",
                                       "ozone", "particle", "VOC", "demand",
-                                      "power", "frequency_percent","actual_status",
+                                      "power", "frequency_percent", "actual_status",
                                       "airflow", "fault_code") or sensor["value"] == 127.5 or sensor["value"] == 65535:
                 continue
             async_add_entities([DaikinSkyportSensor(coordinator, sensor["name"], sensor["type"], index)], True)
+
 
 class DaikinSkyportSensor(SensorEntity):
     """Representation of a Daikin sensor."""

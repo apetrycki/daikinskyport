@@ -3,7 +3,6 @@ import requests
 import json
 import os
 import logging
-from time import sleep
 
 from requests.exceptions import RequestException
 from requests.adapters import HTTPAdapter
@@ -15,10 +14,12 @@ logger = logging.getLogger('daikinskyport')
 
 NEXT_SCHEDULE = 1
 
+
 class ExpiredTokenError(Exception):
     """Raised when Daikin Skyport API returns a code indicating expired credentials."""
 
     pass
+
 
 def config_from_file(filename, config=None):
     ''' Small configuration file management function'''
@@ -37,7 +38,7 @@ def config_from_file(filename, config=None):
             try:
                 with open(filename, 'r') as fdesc:
                     return json.loads(fdesc.read())
-            except IOError as error:
+            except IOError:
                 return False
         else:
             return {}
@@ -68,7 +69,7 @@ class DaikinSkyport(object):
             self.user_email = config['EMAIL']
         else:
             logger.error("Email missing from config.")
-        if 'PASSWORD' in config: # PASSWORD is only needed during first login
+        if 'PASSWORD' in config:  # PASSWORD is only needed during first login
             self.user_password = config['PASSWORD']
 
         if 'ACCESS_TOKEN' in config:
@@ -155,7 +156,7 @@ class DaikinSkyport(object):
             for thermostat in self.thermostatlist:
                 overwrite = False
                 thermostat_info = self.get_thermostat_info(thermostat['id'])
-                if thermostat_info == None:
+                if thermostat_info is None:
                     continue
                 thermostat_info['name'] = thermostat['name']
                 thermostat_info['id'] = thermostat['id']
@@ -171,8 +172,7 @@ class DaikinSkyport(object):
             self.authenticated = False
             logger.debug("Error connecting to Daikin Skyport while attempting to get "
                         "thermostat data. Status code: %s Message: %s", request.status_code, request.text)
-            raise ExpiredTokenError ("Daikin Skyport token expired")
-            return None
+            raise ExpiredTokenError("Daikin Skyport token expired")
 
     def get_thermostat_info(self, deviceid):
         ''' Retrieve the device info for the specific device '''
@@ -197,8 +197,7 @@ class DaikinSkyport(object):
                 self.authenticated = False
             logger.debug("Error connecting to Daikin Skyport while attempting to get "
                         "thermostat data. Status code: %s Message: %s", request.status_code, request.text)
-            raise ExpiredTokenError ("Daikin Skyport token expired")
-            return None
+            raise ExpiredTokenError("Daikin Skyport token expired")
         if request.status_code == requests.codes.ok:
             self.authenticated = True
             return request.json()
@@ -206,8 +205,7 @@ class DaikinSkyport(object):
             self.authenticated = False
             logger.debug("Error connecting to Daikin Skyport while attempting to get "
                         "thermostat data. Status code: %s Message: %s", request.status_code, request.text)
-            raise ExpiredTokenError ("Daikin Skyport token expired")
-            return None
+            raise ExpiredTokenError("Daikin Skyport token expired")
 
     def get_thermostat(self, index):
         ''' Return a single thermostat based on index '''
@@ -262,7 +260,6 @@ class DaikinSkyport(object):
             sensors.append({"name": f"{name} Indoor", "value": 0, "type": "power"})
         elif "ctIndoorPower" in thermostat:
             sensors.append({"name": f"{name} Indoor", "value": thermostat['ctIndoorPower'], "type": "power"})
-
 
         if self.thermostats[index]['aqOutdoorAvailable']:
             sensors.append({"name": f"{name} Outdoor", "value": thermostat['aqOutdoorParticles'], "type": "particle"})
@@ -332,8 +329,8 @@ class DaikinSkyport(object):
             return None
         if request.status_code == requests.codes.ok:
             return request
-        elif (request.status_code == 401 and retry_count == 0 and
-              request.json()['error'] == 'authorization_expired'):
+        elif (request.status_code == 401 and retry_count == 0
+              and request.json()['error'] == 'authorization_expired'):
             if self.refresh_tokens():
                 return self.make_request(body, deviceID, log_msg_action,
                                          retry_count=retry_count + 1)
@@ -418,7 +415,7 @@ class DaikinSkyport(object):
         return self.make_request(index, body, log_msg_action)
 
     def set_permanent_hold(self, index, cool_temp=None, heat_temp=None):
-        ''' Set a climate hold - ie enable/disable schedule. 
+        ''' Set a climate hold - ie enable/disable schedule.
         active values are true/false
         hold_duration is NEXT_SCHEDULE'''
         if cool_temp is None:
@@ -465,10 +462,10 @@ class DaikinSkyport(object):
         return self.make_request(index, body, log_msg_action)
 
     def set_fan_schedule(self, index, start, stop, interval, speed):
-        ''' Schedule to run the fan.  
+        ''' Schedule to run the fan.
         start_time is the beginning of the schedule per day.  It is an integer value where every 15 minutes from 00:00 is 1 (each hour = 4)
         end_time is the end of the schedule each day.  Values are same as start_time
-        interval is the run time per hour of the schedule. Options are on the full time (0), 5mins (1), 15mins (2), 30mins (3), and 45mins (4) 
+        interval is the run time per hour of the schedule. Options are on the full time (0), 5mins (1), 15mins (2), 30mins (3), and 45mins (4)
         speed is low (0) medium (1) or high (2)'''
         body = {"fanCirculateStart": start,
                 "fanCirculateStop": stop,
@@ -501,4 +498,3 @@ class DaikinSkyport(object):
 
         log_msg_action = "set humidity level"
         return self.make_request(index, body, log_msg_action)
-    

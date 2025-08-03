@@ -14,26 +14,21 @@ from homeassistant.components.climate import (
 from homeassistant.components.climate.const import (
     ATTR_TARGET_TEMP_LOW,
     ATTR_TARGET_TEMP_HIGH,
-    PRESET_AWAY,
     FAN_AUTO,
     FAN_ON,
     FAN_LOW,
     FAN_MEDIUM,
     FAN_HIGH,
-    PRESET_NONE,
 )
 from homeassistant.const import (
     ATTR_ENTITY_ID,
     ATTR_TEMPERATURE,
-    PRECISION_HALVES,
     PRECISION_TENTHS,
-    STATE_OFF,
     STATE_ON,
     UnitOfTemperature,
 )
 
 import homeassistant.helpers.config_validation as cv
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.config_entries import ConfigEntry
@@ -52,34 +47,34 @@ from .const import (
     COORDINATOR,
 )
 
-WEEKDAY = [ "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
+WEEKDAY = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
 
-#Hold settings (manual mode)
+# Hold settings (manual mode)
 HOLD_NEXT_TRANSITION = 0
 HOLD_1HR = 60
 HOLD_2HR = 120
 HOLD_4HR = 240
 HOLD_8HR = 480
 
-#Preset values
+# Preset values
 PRESET_AWAY = "Away"
 PRESET_SCHEDULE = "Schedule"
 PRESET_MANUAL = "Manual"
 PRESET_TEMP_HOLD = "Temp Hold"
 FAN_SCHEDULE = "Schedule"
 
-#Fan Schedule values
+# Fan Schedule values
 ATTR_FAN_START_TIME = "start_time"
 ATTR_FAN_STOP_TIME = "end_time"
 ATTR_FAN_INTERVAL = "interval"
 ATTR_FAN_SPEED = "fan_speed"
 
-#Night Mode values
+# Night Mode values
 ATTR_NIGHT_MODE_START_TIME = "start_time"
 ATTR_NIGHT_MODE_END_TIME = "end_time"
 ATTR_NIGHT_MODE_ENABLE = "enable"
 
-#Schedule Adjustment values
+# Schedule Adjustment values
 ATTR_SCHEDULE_DAY = "day"
 ATTR_SCHEDULE_START_TIME = "start_time"
 ATTR_SCHEDULE_PART = "part"
@@ -87,13 +82,13 @@ ATTR_SCHEDULE_PART_ENABLED = "enable"
 ATTR_SCHEDULE_PART_LABEL = "label"
 ATTR_SCHEDULE_HEATING_SETPOINT = "heat_temp_setpoint"
 ATTR_SCHEDULE_COOLING_SETPOINT = "cool_temp_setpoint"
-ATTR_SCHEDULE_MODE = "mode" #Unknown what this does right now
-ATTR_SCHEDULE_ACTION = "action" #Unknown what this does right now
+ATTR_SCHEDULE_MODE = "mode"  # Unknown what this does right now
+ATTR_SCHEDULE_ACTION = "action"  # Unknown what this does right now
 
-#OneClean values
+# OneClean values
 ATTR_ONECLEAN_ENABLED = "enable"
 
-#Efficiency value
+# Efficiency value
 ATTR_EFFICIENCY_ENABLED = "enable"
 
 # Order matters, because for reverse mapping we don't want to map HEAT to AUX
@@ -222,6 +217,7 @@ SUPPORT_FLAGS = (
     | ClimateEntityFeature.TURN_OFF
 )
 
+
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
@@ -234,7 +230,7 @@ async def async_setup_entry(
     for index in range(len(coordinator.daikinskyport.thermostats)):
         thermostat = coordinator.daikinskyport.get_thermostat(index)
         entities.append(Thermostat(coordinator, index, thermostat))
-    
+
     async_add_entities(entities, True)
 
     def resume_program_set_service(service: ServiceCall) -> None:
@@ -242,7 +238,7 @@ async def async_setup_entry(
         entity_ids = service.data[ATTR_ENTITY_ID]
 
         _LOGGER.info("Resuming program for %s", entity_ids)
-        
+
         for entity in entity_ids:
             for thermostat in entities:
                 if thermostat.entity_id == entity:
@@ -253,7 +249,7 @@ async def async_setup_entry(
 
     def set_fan_schedule_service(service):
         """Set the fan schedule on the target thermostats."""
-        
+
         start = service.data.get(ATTR_FAN_START_TIME)
         stop = service.data.get(ATTR_FAN_STOP_TIME)
         interval = service.data.get(ATTR_FAN_INTERVAL)
@@ -262,7 +258,7 @@ async def async_setup_entry(
         entity_ids = service.data[ATTR_ENTITY_ID]
 
         _LOGGER.info("Setting fan schedule for %s", entity_ids)
-        
+
         for entity in entity_ids:
             for thermostat in entities:
                 if thermostat.entity_id == entity:
@@ -273,7 +269,7 @@ async def async_setup_entry(
 
     def set_night_mode_service(service):
         """Set night mode on the target thermostats."""
-        
+
         start = service.data.get(ATTR_NIGHT_MODE_START_TIME)
         stop = service.data.get(ATTR_NIGHT_MODE_END_TIME)
         enable = service.data.get(ATTR_NIGHT_MODE_ENABLE)
@@ -281,7 +277,7 @@ async def async_setup_entry(
         entity_ids = service.data[ATTR_ENTITY_ID]
 
         _LOGGER.info("Setting night mode for %s", entity_ids)
-        
+
         for entity in entity_ids:
             for thermostat in entities:
                 if thermostat.entity_id == entity:
@@ -303,7 +299,7 @@ async def async_setup_entry(
         entity_ids = service.data[ATTR_ENTITY_ID]
 
         _LOGGER.info("Setting thermostat schedule for %s", entity_ids)
-        
+
         for entity in entity_ids:
             for thermostat in entities:
                 if thermostat.entity_id == entity:
@@ -319,7 +315,7 @@ async def async_setup_entry(
         entity_ids = service.data[ATTR_ENTITY_ID]
 
         _LOGGER.info("Setting OneClean for %s", entity_ids)
-        
+
         for entity in entity_ids:
             for thermostat in entities:
                 if thermostat.entity_id == entity:
@@ -335,7 +331,7 @@ async def async_setup_entry(
         entity_ids = service.data[ATTR_ENTITY_ID]
 
         _LOGGER.info("Setting efficiency for %s", entity_ids)
-        
+
         for entity in entity_ids:
             for thermostat in entities:
                 if thermostat.entity_id == entity:
@@ -386,6 +382,7 @@ async def async_setup_entry(
         schema=EFFICIENCY_SCHEMA,
     )
 
+
 class Thermostat(ClimateEntity):
     """A thermostat class for Daikin Skyport Thermostats."""
 
@@ -424,7 +421,7 @@ class Thermostat(ClimateEntity):
         if self.thermostat["ctSystemCapHeat"]:
             self._operation_list.append(HVACMode.HEAT)
         if (("ctOutdoorNoofCoolStages" in self.thermostat and self.thermostat["ctOutdoorNoofCoolStages"] > 0)
-        or  ("P1P2S21CoolingCapability" in self.thermostat and self.thermostat["P1P2S21CoolingCapability"] == True)):
+                or ("P1P2S21CoolingCapability" in self.thermostat and self.thermostat["P1P2S21CoolingCapability"] is True)):
             self._operation_list.append(HVACMode.COOL)
         if len(self._operation_list) == 2:
             self._operation_list.insert(0, HVACMode.AUTO)
@@ -471,7 +468,7 @@ class Thermostat(ClimateEntity):
     @property
     def available(self):
         """Return if device is available."""
-        return True #TBD: Need to determine how to tell if the thermostat is available or not
+        return True  # TBD: Need to determine how to tell if the thermostat is available or not
 
     @property
     def supported_features(self):
@@ -563,7 +560,6 @@ class Thermostat(ClimateEntity):
     @property
     def extra_state_attributes(self):
         """Return device specific state attributes."""
-        status = self.thermostat["equipmentStatus"]
         fan_cfm = "Unavailable"
         fan_demand = "Unavailable"
         cooling_demand = "Unavailable"
@@ -573,15 +569,15 @@ class Thermostat(ClimateEntity):
         humidification_demand = "Unavailable"
         indoor_mode = "Unavailable"
 
-        if "ctAHCurrentIndoorAirflow" in self.thermostat: 
+        if "ctAHCurrentIndoorAirflow" in self.thermostat:
             if self.thermostat["ctAHCurrentIndoorAirflow"] == 65535:
                 fan_cfm = self.thermostat["ctIFCIndoorBlowerAirflow"]
             else:
                 fan_cfm = self.thermostat["ctAHCurrentIndoorAirflow"]
-        
+
         if "ctAHFanCurrentDemandStatus" in self.thermostat:
             fan_demand = round(self.thermostat["ctAHFanCurrentDemandStatus"] / 2, 1)
-            
+
         if "ctOutdoorCoolRequestedDemand" in self.thermostat:
             cooling_demand = round(self.thermostat["ctOutdoorCoolRequestedDemand"] / 2, 1)
 
@@ -625,7 +621,6 @@ class Thermostat(ClimateEntity):
             "media_filter_days": self.thermostat["alertMediaAirFilterDays"]
         }
 
-
     def set_preset_mode(self, preset_mode):
         """Activate a preset."""
         if preset_mode == self.preset_mode:
@@ -641,13 +636,13 @@ class Thermostat(ClimateEntity):
         elif preset_mode == PRESET_MANUAL:
             self.data.daikinskyport.set_away(self.thermostat_index, False)
             self.data.daikinskyport.set_permanent_hold(self.thermostat_index)
-            
+
         elif preset_mode == PRESET_TEMP_HOLD:
             self.data.daikinskyport.set_away(self.thermostat_index, False)
             self.data.daikinskyport.set_temp_hold(self.thermostat_index)
         else:
             return
-        
+
         self._preset_mode = preset_mode
 
         self.update_without_throttle = True
@@ -682,10 +677,10 @@ class Thermostat(ClimateEntity):
                 heat_temp_setpoint,
                 self.hold_preference(),
         )
-        
+
         self._cool_setpoint = cool_temp_setpoint
         self._heat_setpoint = heat_temp_setpoint
-        
+
         _LOGGER.debug(
             "Setting Daikin Skyport hold_temp to: heat=%s, is=%s, " "cool=%s, is=%s",
             heat_temp,
@@ -703,19 +698,19 @@ class Thermostat(ClimateEntity):
                 self.thermostat_index,
                 FAN_TO_DAIKIN_FAN[fan_mode]
             )
-            
+
             self._fan_mode = fan_mode
             self.update_without_throttle = True
 
             _LOGGER.debug("Setting fan mode to: %s", fan_mode)
         elif fan_mode in {FAN_LOW, FAN_MEDIUM, FAN_HIGH}:
-            # Start the fan if it's off.  
+            # Start the fan if it's off.
             if self._fan_mode == FAN_AUTO:
                 self.data.daikinskyport.set_fan_mode(
                     self.thermostat_index,
                     FAN_TO_DAIKIN_FAN[FAN_ON]
                 )
-                
+
                 self._fan_mode = fan_mode
 
                 _LOGGER.debug("Setting fan mode to: %s", fan_mode)
@@ -724,7 +719,7 @@ class Thermostat(ClimateEntity):
                 self.thermostat_index,
                 FAN_TO_DAIKIN_FAN[fan_mode]
             )
-            
+
             self._fan_speed = FAN_TO_DAIKIN_FAN[fan_mode]
             self.update_without_throttle = True
 
@@ -733,7 +728,6 @@ class Thermostat(ClimateEntity):
             error = "Invalid fan_mode value:  Valid values are 'on', 'auto', or 'schedule'"
             _LOGGER.error(error)
             return
-
 
     def set_temp_hold(self, temp):
         """Set temperature hold in modes other than auto."""
@@ -765,7 +759,6 @@ class Thermostat(ClimateEntity):
 
         self._cool_setpoint = high_temp
         self._heat_setpoint = low_temp
-
 
     def set_humidity(self, humidity):
         """Set the humidity level."""

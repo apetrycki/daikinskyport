@@ -1,7 +1,5 @@
 """Support for displaying weather info from Daikin Skyport API."""
-from datetime import datetime, timedelta
-from pytz import timezone, utc
-import logging
+from datetime import timedelta
 
 from homeassistant.components.weather import (
     ATTR_FORECAST_CONDITION,
@@ -13,13 +11,9 @@ from homeassistant.components.weather import (
     WeatherEntityFeature,
 )
 from homeassistant.const import (
-    UnitOfLength,
-    UnitOfPressure,
-    UnitOfSpeed,
     UnitOfTemperature,
 )
 from homeassistant.util import dt as dt_util
-from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.core import HomeAssistant
@@ -33,6 +27,7 @@ from .const import (
 )
 from . import DaikinSkyportData
 
+
 async def async_setup_entry(
     hass: HomeAssistant, entry: ConfigEntry, async_add_entities: AddEntitiesCallback
 ) -> None:
@@ -44,6 +39,7 @@ async def async_setup_entry(
     for index in range(len(coordinator.daikinskyport.thermostats)):
         thermostat = coordinator.daikinskyport.get_thermostat(index)
         async_add_entities([DaikinSkyportWeather(coordinator, thermostat["name"], index)], True)
+
 
 class DaikinSkyportWeather(WeatherEntity):
     """Representation of Daikin Skyport weather data."""
@@ -63,10 +59,10 @@ class DaikinSkyportWeather(WeatherEntity):
 
     async def async_forecast_daily(self) -> list[Forecast] | None:
         """Return the daily forecast in native units.
-        
+
         Only implement this method if `WeatherEntityFeature.FORECAST_DAILY` is set
         """
-        
+
         forecasts: list[Forecast] = []
         date = dt_util.utcnow()
         for day in ["Today", "Day1", "Day2", "Day3", "Day4", "Day5"]:
