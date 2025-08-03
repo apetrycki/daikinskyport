@@ -9,6 +9,7 @@ from homeassistant.const import CONF_EMAIL, CONF_PASSWORD, CONF_NAME
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import callback
+from homeassistant.exceptions import HomeAssistantError
 from homeassistant.helpers.schema_config_entry_flow import (
     SchemaFlowFormStep,
     SchemaOptionsFlowHandler,
@@ -38,25 +39,24 @@ class DaikinSkyportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_user(self, user_input=None):
         self._abort_if_unique_id_configured()
         if user_input is not None:
-            try:
-                daikinskyport = DaikinSkyport(config={
-                  'EMAIL': user_input[CONF_EMAIL],
-                  'PASSWORD': user_input[CONF_PASSWORD],
-                })
-                result = await self.hass.async_add_executor_job(daikinskyport.request_tokens)
-            except RequestException:
-                errors["base"] = "cannot_connect"
-            else:
-                await self.async_set_unique_id(
-                    daikinskyport.user_email, raise_on_progress=False
-                )
-                
-                user_input[CONF_ACCESS_TOKEN] = daikinskyport.access_token
-                user_input[CONF_REFRESH_TOKEN] = daikinskyport.refresh_token
+            daikinskyport = DaikinSkyport(config={
+              'EMAIL': user_input[CONF_EMAIL],
+              'PASSWORD': user_input[CONF_PASSWORD],
+            })
+            result = await self.hass.async_add_executor_job(daikinskyport.request_tokens)
+            if result is None:
+                raise HomeAssistantError("Authentication failure. Verify username and password are correct.")
 
-                return self.async_create_entry(
-                    title=user_input[CONF_NAME], data=user_input
-                )
+            await self.async_set_unique_id(
+                daikinskyport.user_email, raise_on_progress=False
+            )
+
+            user_input[CONF_ACCESS_TOKEN] = daikinskyport.access_token
+            user_input[CONF_REFRESH_TOKEN] = daikinskyport.refresh_token
+
+            return self.async_create_entry(
+                title=user_input[CONF_NAME], data=user_input
+            )
                   
         return self.async_show_form(
             step_id="user", 
