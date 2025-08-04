@@ -597,10 +597,14 @@ class Thermostat(ClimateEntity):
         if "ctAHHumidificationRequestedDemand" in self.thermostat:
             humidification_demand = round(self.thermostat["ctAHHumidificationRequestedDemand"] / 2, 1)
 
-        if self.thermostat["ctAHUnitType"] != 255:
+        if "ctAHUnitType" in self.thermostat and self.thermostat["ctAHUnitType"] != 255:
             indoor_mode=self.thermostat["ctAHMode"].strip()
-        elif self.thermostat["ctIFCUnitType"] != 255:
+        elif "ctIFCUnitType" in self.thermostat and self.thermostat["ctIFCUnitType"] != 255:
             indoor_mode=self.thermostat["ctIFCOperatingHeatCoolMode"].strip()
+
+        outdoor_mode = "Unavailable"
+        if "ctOutdoorMode" in self.thermostat:
+            outdoor_mode = self.thermostat["ctOutdoorMode"].strip()
 
         return {
             "fan": self.fan,
@@ -616,7 +620,7 @@ class Thermostat(ClimateEntity):
             "night_mode_active": self.thermostat["nightModeActive"],
             "night_mode_enabled": self.thermostat["nightModeEnabled"],
             "indoor_mode": indoor_mode,
-            "outdoor_mode": self.thermostat["ctOutdoorMode"].strip(),
+            "outdoor_mode": outdoor_mode,
             "thermostat_unlocked": bool(self.thermostat["displayLockPIN"] == 0),
             "media_filter_days": self.thermostat["alertMediaAirFilterDays"]
         }
