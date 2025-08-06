@@ -1,0 +1,4 @@
+[flake8]
+# E203 whitespace before ':' (disabled to improve interop with black)
+# E501 line length > 79 characters
+extend-ignore = E203,E501
