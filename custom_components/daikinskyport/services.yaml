@@ -157,7 +157,7 @@ daikin_set_oneclean:
         boolean:
 daikin_prioritize_efficiency:
   description: >-
-     Set whether a heatpump system uses aux heat above -5.5C (22F) to heat more rapidly
+     Set whether a heatpump system uses aux heat above the balance point to heat more rapidly (Prioritze Comfort vs. Efficiency)
   fields:
     entity_id:
       selector:
@@ -171,4 +171,5 @@ daikin_prioritize_efficiency:
       example: "True"
       selector:
         boolean:
+
       
