@@ -188,4 +188,3 @@ class DaikinSkyportData:
             return True
         _LOGGER.error("Error refreshing Daikin Skyport tokens")
         return False
-
