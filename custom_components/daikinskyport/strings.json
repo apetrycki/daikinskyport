@@ -14,7 +14,7 @@
     },
     "error": {
       "cannot_connect": "[%key:common::config_flow::error::cannot_connect%]",
-      "invalid_api_key": "[%key:common::config_flow::error::invalid_api_key%]",
+      "invalid_api_key": "[%key:common::config_flow::error::invalid_api_key%]"
     },
     "abort": {
       "single_instance_allowed": "[%key:common::config_flow::abort::single_instance_allowed%]"
@@ -43,7 +43,7 @@
   },
   "system_health": {
     "info": {
-      "can_reach_server": "Reach Daikin Skyport server",
+      "can_reach_server": "Reach Daikin Skyport server"
     }
   }
 }

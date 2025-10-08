@@ -159,7 +159,7 @@ Night mode:
 
 Sensors:
 ```
-"equipmentStatus": the running state of the system, 1=cooling, 2=overcool dehumidifying, 3=heating, 4=fan, 5=idle, 
+"equipmentStatus": the running state of the system, 1=cooling, 2=overcool dehumidifying, 3=heating, 4=fan, 5=idle,
 “tempIndoor”: current indoor temperature, in C (thermostat measurement)
 “humIndoor”: current indoor humidity, in % (thermostat measurement)
 “tempOutdoor”: current outdoor temperature, in C (cloud-based)
@@ -197,7 +197,7 @@ Sensors:
 "aq[In/Out]doorValue": AQI score
 "aqIndoorParticlesLevel": TBD
 "aqIndoorVOCLevel": TBD
-"ctOutdoorAirTemperature": outdoor unit air temperature (measurement); needs to be divided by 10 and converted from Farenheit to Celcius. i.e., ((ctOutdoorAirTemperature / 10) - 32) * 5 / 9 
+"ctOutdoorAirTemperature": outdoor unit air temperature (measurement); needs to be divided by 10 and converted from Farenheit to Celcius. i.e., ((ctOutdoorAirTemperature / 10) - 32) * 5 / 9
 "ctOutdoorPower": outdoor unit power usage; multiply by 10 for Watts
 "ctIndoorPower": indoor unit power usage; usage TBD
 "ctIFCIndoorBlowerAirflow; furnace blower aiflow in CFM"

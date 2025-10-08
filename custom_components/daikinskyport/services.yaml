@@ -171,5 +171,3 @@ daikin_prioritize_efficiency:
       example: "True"
       selector:
         boolean:
-
-      
