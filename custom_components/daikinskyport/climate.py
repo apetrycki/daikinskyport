@@ -35,7 +35,8 @@ from homeassistant.const import (
 import homeassistant.helpers.config_validation as cv
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
-from homeassistant.core import HomeAssistant, ServiceCall
+from homeassistant.helpers.event import async_track_state_change_event
+from homeassistant.core import HomeAssistant, ServiceCall, Event, callback
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.device_registry import DeviceInfo
 
@@ -50,6 +51,7 @@ from .const import (
     DAIKIN_HVAC_MODE_AUTO,
     DAIKIN_HVAC_MODE_AUXHEAT,
     COORDINATOR,
+    CONF_TEMP_OFFSET_SENSOR,
 )
 
 WEEKDAY = [ "Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"]
@@ -233,7 +235,7 @@ async def async_setup_entry(
 
     for index in range(len(coordinator.daikinskyport.thermostats)):
         thermostat = coordinator.daikinskyport.get_thermostat(index)
-        entities.append(Thermostat(coordinator, index, thermostat))
+        entities.append(Thermostat(hass, entry, coordinator, index, thermostat))
     
     async_add_entities(entities, True)
 
@@ -396,8 +398,10 @@ class Thermostat(ClimateEntity):
     _attr_has_entity_name = True
     _enable_turn_on_off_backwards_compatibility = False
 
-    def __init__(self, data, thermostat_index, thermostat):
+    def __init__(self, hass, entry, data, thermostat_index, thermostat):
         """Initialize the thermostat."""
+        self.hass = hass
+        self.entry = entry
         self.data = data
         self.thermostat_index = thermostat_index
         self.thermostat = thermostat
@@ -437,6 +441,38 @@ class Thermostat(ClimateEntity):
                               }
         self._fan_modes = [FAN_AUTO, FAN_ON, FAN_LOW, FAN_MEDIUM, FAN_HIGH, FAN_SCHEDULE]
         self.update_without_throttle = False
+        self._offset_sensor_unsub = None
+
+    async def async_added_to_hass(self) -> None:
+        """Run when entity is added to hass."""
+        await super().async_added_to_hass()
+        self._subscribe_to_offset_sensor()
+
+    def _subscribe_to_offset_sensor(self) -> None:
+        """Subscribe to offset sensor state changes."""
+        # Unsubscribe from previous sensor if any
+        if self._offset_sensor_unsub is not None:
+            self._offset_sensor_unsub()
+            self._offset_sensor_unsub = None
+
+        offset_sensor_id = self.entry.options.get(CONF_TEMP_OFFSET_SENSOR)
+        if not offset_sensor_id:
+            return
+
+        @callback
+        def _async_offset_sensor_changed(event: Event) -> None:
+            """Handle offset sensor state changes."""
+            self.async_write_ha_state()
+
+        self._offset_sensor_unsub = async_track_state_change_event(
+            self.hass, [offset_sensor_id], _async_offset_sensor_changed
+        )
+
+    async def async_will_remove_from_hass(self) -> None:
+        """Run when entity is removed from hass."""
+        if self._offset_sensor_unsub is not None:
+            self._offset_sensor_unsub()
+            self._offset_sensor_unsub = None
 
     async def async_update(self):
         """Get the latest state from the thermostat."""
@@ -464,6 +500,19 @@ class Thermostat(ClimateEntity):
         else:
             self._preset_mode = PRESET_MANUAL
 
+    def _get_temp_offset(self) -> float:
+        """Get the temperature offset from the configured sensor."""
+        offset_sensor_id = self.entry.options.get(CONF_TEMP_OFFSET_SENSOR)
+        if not offset_sensor_id:
+            return 0.0
+        state = self.hass.states.get(offset_sensor_id)
+        if state is None or state.state in ("unknown", "unavailable"):
+            return 0.0
+        try:
+            return float(state.state)
+        except (ValueError, TypeError):
+            return 0.0
+
     @property
     def device_info(self) -> DeviceInfo:
         return self.data.device_info
@@ -486,20 +535,20 @@ class Thermostat(ClimateEntity):
     @property
     def current_temperature(self) -> float:
         """Return the current temperature."""
-        return self.thermostat["tempIndoor"]
+        return self.thermostat["tempIndoor"] - self._get_temp_offset()
 
     @property
     def target_temperature_low(self):
         """Return the lower bound temperature we try to reach."""
         if self.hvac_mode == HVACMode.AUTO:
-            return self._heat_setpoint
+            return self._heat_setpoint - self._get_temp_offset()
         return None
 
     @property
     def target_temperature_high(self):
         """Return the upper bound temperature we try to reach."""
         if self.hvac_mode == HVACMode.AUTO:
-            return self._cool_setpoint
+            return self._cool_setpoint - self._get_temp_offset()
         return None
 
     @property
@@ -508,9 +557,9 @@ class Thermostat(ClimateEntity):
         if self.hvac_mode == HVACMode.AUTO:
             return None
         if self.hvac_mode == HVACMode.HEAT:
-            return self._heat_setpoint
+            return self._heat_setpoint - self._get_temp_offset()
         if self.hvac_mode == HVACMode.COOL:
-            return self._cool_setpoint
+            return self._cool_setpoint - self._get_temp_offset()
         return None
 
     @property
@@ -659,13 +708,15 @@ class Thermostat(ClimateEntity):
 
     def set_auto_temp_hold(self, heat_temp, cool_temp):
         """Set temperature hold in auto mode."""
+        offset = self._get_temp_offset()
+
         if cool_temp is not None:
-            cool_temp_setpoint = cool_temp
+            cool_temp_setpoint = cool_temp + offset
         else:
             cool_temp_setpoint = self.thermostat["cspHome"]
 
         if heat_temp is not None:
-            heat_temp_setpoint = heat_temp
+            heat_temp_setpoint = heat_temp + offset
         else:
             heat_temp_setpoint = self.thermostat["hspHome"]
 
@@ -682,7 +733,7 @@ class Thermostat(ClimateEntity):
                 heat_temp_setpoint,
                 self.hold_preference(),
         )
-        
+
         self._cool_setpoint = cool_temp_setpoint
         self._heat_setpoint = heat_temp_setpoint
         
@@ -737,16 +788,20 @@ class Thermostat(ClimateEntity):
 
     def set_temp_hold(self, temp):
         """Set temperature hold in modes other than auto."""
+        offset = self._get_temp_offset()
         if self.hvac_mode == HVACMode.HEAT:
             heat_temp = temp
-            cool_temp = self.thermostat["cspHome"]
+            cool_temp = None
         elif self.hvac_mode == HVACMode.COOL:
             cool_temp = temp
-            heat_temp = self.thermostat["hspHome"]
+            heat_temp = None
         self.set_auto_temp_hold(heat_temp, cool_temp)
 
-        self._cool_setpoint = cool_temp
-        self._heat_setpoint = heat_temp
+        # Update local setpoints with Daikin-adjusted values
+        if cool_temp is not None:
+            self._cool_setpoint = cool_temp + offset
+        if heat_temp is not None:
+            self._heat_setpoint = heat_temp + offset
 
     def set_temperature(self, **kwargs):
         """Set new target temperature."""
@@ -762,9 +817,6 @@ class Thermostat(ClimateEntity):
             self.set_temp_hold(temp)
         else:
             _LOGGER.error("Missing valid arguments for set_temperature in %s", kwargs)
-
-        self._cool_setpoint = high_temp
-        self._heat_setpoint = low_temp
 
 
     def set_humidity(self, humidity):
