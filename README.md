@@ -41,5 +41,3 @@ The email and password must be the same ones that you used when you created your
 
 
 Once Core has restarted, navigate to **Configuration** in the sidebar, then **Entities**. Use the search box to search for the name of your thermostat. For example, search for `main room` (the name of your thermostat is shown on the touch screen). You should see a `climate`, `weather`, and a number of `sensor` entities.
-
-**NOTE:** This component does not show up in the list of Home Assistant integrations.
