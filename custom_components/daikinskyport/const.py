@@ -60,5 +60,6 @@ DAIKIN_HVAC_MODE_AUXHEAT = 4
 
 CONF_REFRESH_TOKEN = "refresh_token"
 CONF_ACCESS_TOKEN = "access_token"
+CONF_TEMP_OFFSET_SENSOR = "temp_offset_sensor"
 
 COORDINATOR = "coordinator"
