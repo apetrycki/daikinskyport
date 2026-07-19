@@ -194,8 +194,8 @@ THERMOSTAT_SCHEDULE_SCHEMA = vol.Schema(
         vol.Optional(ATTR_SCHEDULE_PART): cv.positive_int,
         vol.Optional(ATTR_SCHEDULE_PART_ENABLED): cv.boolean,
         vol.Optional(ATTR_SCHEDULE_PART_LABEL): cv.string,
-        vol.Optional(ATTR_SCHEDULE_HEATING_SETPOINT): cv.positive_int,
-        vol.Optional(ATTR_SCHEDULE_COOLING_SETPOINT): cv.positive_int,
+        vol.Optional(ATTR_SCHEDULE_HEATING_SETPOINT): cv.positive_float,
+        vol.Optional(ATTR_SCHEDULE_COOLING_SETPOINT): cv.positive_float,
     }
 )
 
