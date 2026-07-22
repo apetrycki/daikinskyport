@@ -36,7 +36,11 @@
       "init": {
         "description": "Daikin Skyport Integration for DaikinOne+ Thermostat",
         "data": {
-          "name": "Name"
+          "name": "Name",
+          "temp_offset_sensor": "Temperature Offset Sensor"
+        },
+        "data_description": {
+          "temp_offset_sensor": "Select a sensor that provides a temperature offset value. This offset will be applied to all temperature readings and setpoints (e.g., if the sensor shows 2, displayed temperatures will be reduced by 2°C and setpoints will be increased by 2°C when sent to the thermostat)."
         }
       }
     }
