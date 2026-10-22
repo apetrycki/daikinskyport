@@ -111,7 +111,7 @@ class DaikinSkyportWeather(WeatherEntity):
         """Return the temperature."""
         try:
             return float(self.weather["weatherTodayTempC"])
-        except ValueError:
+        except (TypeError, ValueError, KeyError):
             return None
 
     @property
@@ -119,7 +119,7 @@ class DaikinSkyportWeather(WeatherEntity):
         """Return the humidity."""
         try:
             return int(self.weather["weatherTodayHum"])
-        except ValueError:
+        except (TypeError, ValueError, KeyError):
             return None
 
     @property
@@ -134,4 +134,7 @@ class DaikinSkyportWeather(WeatherEntity):
         for key in thermostat:
             if key.startswith('weather'):
                 self.weather[key] = thermostat[key]
-        self.weather["tz"] = thermostat["timeZone"]
+        # One Lite responses commonly do not include the optional cloud
+        # weather/time-zone fields.  Keep the weather entity unavailable
+        # instead of failing the entire platform update.
+        self.weather["tz"] = thermostat.get("timeZone")
