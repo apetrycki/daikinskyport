@@ -10,6 +10,7 @@ from homeassistant import config_entries
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import callback
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.selector import EntitySelector, EntitySelectorConfig
 from homeassistant.helpers.schema_config_entry_flow import (
     SchemaFlowFormStep,
     SchemaOptionsFlowHandler,
@@ -18,6 +19,7 @@ from .const import (
     DOMAIN,
     CONF_ACCESS_TOKEN,
     CONF_REFRESH_TOKEN,
+    CONF_TEMP_OFFSET_SENSOR,
 )
 import voluptuous as vol
 from .daikinskyport import DaikinSkyport
@@ -25,6 +27,12 @@ from .daikinskyport import DaikinSkyport
 OPTIONS_SCHEMA = vol.Schema(
     {
         vol.Optional(CONF_NAME, default="Daikin"): str,
+        vol.Optional(CONF_TEMP_OFFSET_SENSOR): EntitySelector(
+            EntitySelectorConfig(
+                domain="sensor",
+                device_class="temperature_delta",
+            )
+        ),
     }
 )
 OPTIONS_FLOW = {
