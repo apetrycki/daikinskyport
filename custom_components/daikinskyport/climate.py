@@ -575,7 +575,13 @@ class Thermostat(ClimateEntity):
             # Y terminals are the authoritative cooling-stage indicators.
             if self.thermostat.get("y1Terminal") or self.thermostat.get("y2Terminal"):
                 return HVACAction.COOLING
-            if self._value("equipmentStatus", "eqStatus") == 3:
+            # eqStatus=3 also shows up in Cool mode with no Y terminal on (the fan-only
+            # phase between compressor runs), so it only means heating when the
+            # thermostat is in a heating mode or a heat stage (W2) is on.
+            if self._value("equipmentStatus", "eqStatus") == 3 and (
+                self._hvac_mode in (HVACMode.HEAT, HVACMode.AUTO)
+                or self.thermostat.get("w2Terminal")
+            ):
                 return HVACAction.HEATING
             if self.thermostat.get("fanStatus") or self.thermostat.get("gTerminal"):
                 return HVACAction.FAN
