@@ -163,6 +163,7 @@ class DaikinSkyport(object):
                 thermostat_info['name'] = thermostat['name']
                 thermostat_info['id'] = thermostat['id']
                 thermostat_info['model'] = thermostat['model']
+                self._normalise_thermostat(thermostat_info)
                 
                 for index in range(len(self.thermostats)):
                     if thermostat['id'] == self.thermostats[index]['id']:
@@ -183,6 +184,54 @@ class DaikinSkyport(object):
                         "thermostat data. Status code: %s Message: %s", request.status_code, request.text)
             raise ExpiredTokenError ("Daikin Skyport token expired")
             return None
+
+    @staticmethod
+    def _normalise_thermostat(thermostat):
+        """Expose One Lite (D2271) data through the established Skyport schema.
+
+        Daikin's One Lite API uses different names for the same live values.
+        Keep the original values intact and add only the aliases consumed by the
+        platforms.  The private marker is also used to select safe write keys.
+        """
+        # A normalized One Lite dictionary already has cspActive.  Use its
+        # native coolSP field (or its existing marker), not cspActive, for
+        # schema detection so a later refresh cannot reclassify it as One+.
+        if thermostat.get("_daikin_schema") != "onelite" and "coolSP" not in thermostat:
+            thermostat["_daikin_schema"] = "skyport"
+            return thermostat
+
+        thermostat["_daikin_schema"] = "onelite"
+        aliases = {
+            "cspActive": "coolSP",
+            "hspActive": "heatSP",
+            "cspHome": "coolSP",
+            "hspHome": "heatSP",
+            "tempIndoor": "spaceTemp",
+            "humIndoor": "spaceHum",
+            "equipmentStatus": "eqStatus",
+            "geofencingAway": "away",
+            "schedEnabled": "progOn",
+            "schedOverride": "progOn",
+            "statFirmware": "firmwareVersion",
+            "nightModeEnabled": "nightDimmer",
+            "nightModeActive": "nightDimmer",
+            "displayLockPIN": "security",
+            "alertMediaAirFilterDays": "filterDaysRun",
+        }
+        for canonical, native in aliases.items():
+            if native in thermostat:
+                thermostat[canonical] = thermostat[native]
+
+        # One Lite reports a boolean fan status, not fan-circulate controls.
+        thermostat.setdefault("fanCirculate", 0)
+        thermostat.setdefault("fanCirculateSpeed", 0)
+        thermostat.setdefault("schedOverrideDuration", 0)
+        thermostat.setdefault("ctSystemCapHeat", bool(thermostat.get("heat1") or thermostat.get("heat2") or thermostat.get("w1ObTerminal")))
+        thermostat.setdefault("ctOutdoorNoofCoolStages", int(bool(thermostat.get("cool1") or thermostat.get("cool2") or thermostat.get("y1Terminal"))))
+        return thermostat
+
+    def _is_onelite(self, index):
+        return self.thermostats[index].get("_daikin_schema") == "onelite"
 
     def get_thermostat_info(self, deviceid):
         ''' Retrieve the device info for the specific device '''
@@ -228,8 +277,10 @@ class DaikinSkyport(object):
         sensors = list()
         thermostat = self.thermostats[index]
         name = thermostat['name']
-        sensors.append({"name": f"{name} Outdoor", "value": thermostat['tempOutdoor'], "type": "temperature"})
-        sensors.append({"name": f"{name} Outdoor", "value": thermostat['humOutdoor'], "type": "humidity"})
+        if "tempOutdoor" in thermostat:
+            sensors.append({"name": f"{name} Outdoor", "value": thermostat['tempOutdoor'], "type": "temperature"})
+        if "humOutdoor" in thermostat:
+            sensors.append({"name": f"{name} Outdoor", "value": thermostat['humOutdoor'], "type": "humidity"})
         if "ctOutdoorFanRequestedDemandPercentage" in thermostat:
             sensors.append({"name": f"{name} Outdoor fan", "value": round(thermostat['ctOutdoorFanRequestedDemandPercentage'] / DAIKIN_PERCENT_MULTIPLIER, 1), "type": "demand"})
         if "ctOutdoorHeatRequestedDemand" in thermostat:
@@ -268,17 +319,17 @@ class DaikinSkyport(object):
             sensors.append({"name": f"{name} Indoor air handler blower", "value": thermostat['ctAHCurrentIndoorAirflow'], "type": "airflow"})
 
         ''' if equipment is idle, set power to zero rather than accept bogus data '''
-        if thermostat['equipmentStatus'] == 5:
+        if thermostat.get('equipmentStatus') == 5:
             sensors.append({"name": f"{name} Indoor", "value": 0, "type": "power"})
         elif "ctIndoorPower" in thermostat:
             sensors.append({"name": f"{name} Indoor", "value": thermostat['ctIndoorPower'], "type": "power"})
 
 
-        if self.thermostats[index]['aqOutdoorAvailable']:
+        if self.thermostats[index].get('aqOutdoorAvailable', False):
             sensors.append({"name": f"{name} Outdoor", "value": thermostat['aqOutdoorParticles'], "type": "particle"})
             sensors.append({"name": f"{name} Outdoor", "value": thermostat['aqOutdoorValue'], "type": "score"})
             sensors.append({"name": f"{name} Outdoor", "value": round(thermostat['aqOutdoorOzone'] * 1.96), "type": "ozone"})
-        if self.thermostats[index]['aqIndoorAvailable']:
+        if self.thermostats[index].get('aqIndoorAvailable', False):
             sensors.append({"name": f"{name} Indoor", "value": thermostat['aqIndoorParticlesValue'], "type": "particle"})
             sensors.append({"name": f"{name} Indoor", "value": thermostat['aqIndoorValue'], "type": "score"})
             sensors.append({"name": f"{name} Indoor", "value": thermostat['aqIndoorVOCValue'], "type": "VOC"})
@@ -459,6 +510,16 @@ class DaikinSkyport(object):
     def set_temp_hold(self, index, cool_temp=None, heat_temp=None,
                       hold_duration=None):
         ''' Set a temporary hold '''
+        if self._is_onelite(index):
+            if cool_temp is None:
+                cool_temp = self.thermostats[index]["coolSP"]
+            if heat_temp is None:
+                heat_temp = self.thermostats[index]["heatSP"]
+            body = {"heatSP": round(heat_temp, 1), "coolSP": round(cool_temp, 1)}
+            self.thermostats[index]["heatSP"] = body["heatSP"]
+            self.thermostats[index]["coolSP"] = body["coolSP"]
+            self._normalise_thermostat(self.thermostats[index])
+            return self.make_request(index, body, "set One Lite setpoints")
         if hold_duration is None:
             hold_duration = self.thermostats[index]["schedOverrideDuration"]
         if cool_temp is None:
@@ -481,6 +542,8 @@ class DaikinSkyport(object):
         ''' Set a climate hold - ie enable/disable schedule. 
         active values are true/false
         hold_duration is NEXT_SCHEDULE'''
+        if self._is_onelite(index):
+            return self.set_temp_hold(index, cool_temp, heat_temp)
         if cool_temp is None:
             cool_temp = self.thermostats[index]["cspHome"]
         if heat_temp is None:
@@ -499,6 +562,11 @@ class DaikinSkyport(object):
 
     def set_away(self, index, mode, heat_temp=None, cool_temp=None):
         ''' Enable/Disable the away setting and optionally set the away temps '''
+        if self._is_onelite(index):
+            body = {"away": mode}
+            self.thermostats[index]["away"] = mode
+            self._normalise_thermostat(self.thermostats[index])
+            return self.make_request(index, body, "set One Lite away mode")
         if heat_temp is None:
             heat_temp = round(self.thermostats[index]["hspAway"], 1)
         if cool_temp is None:
@@ -516,6 +584,12 @@ class DaikinSkyport(object):
 
     def resume_program(self, index):
         ''' Resume currently scheduled program '''
+        if self._is_onelite(index):
+            body = {"progOn": 1, "away": False}
+            self.thermostats[index]["progOn"] = 1
+            self.thermostats[index]["away"] = False
+            self._normalise_thermostat(self.thermostats[index])
+            return self.make_request(index, body, "resume One Lite program")
         body = {"schedEnabled": True,
                 "schedOverride": 0,
                 "geofencingAway": False
