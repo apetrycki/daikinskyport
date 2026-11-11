@@ -480,7 +480,16 @@ class Thermostat(ClimateEntity):
     @property
     def supported_features(self):
         """Return the list of supported features."""
-        features = SUPPORT_FLAGS
+        features = (
+            ClimateEntityFeature.PRESET_MODE
+            | ClimateEntityFeature.FAN_MODE
+            | ClimateEntityFeature.TURN_ON
+            | ClimateEntityFeature.TURN_OFF
+        )
+        if self.hvac_mode == HVACMode.AUTO:
+            features |= ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
+        elif self.hvac_mode in (HVACMode.HEAT, HVACMode.COOL):
+            features |= ClimateEntityFeature.TARGET_TEMPERATURE
         if self.thermostat.get("ctSystemCapHumidification", False):
             features |= ClimateEntityFeature.TARGET_HUMIDITY
         return features
@@ -791,6 +800,20 @@ class Thermostat(ClimateEntity):
         self.data.daikinskyport.set_hvac_mode(self.thermostat_index, daikin_value)
         self._hvac_mode = hvac_mode
         self.update_without_throttle = True
+
+    def turn_off(self) -> None:
+        """Turn the thermostat off."""
+        self.set_hvac_mode(HVACMode.OFF)
+
+    def turn_on(self) -> None:
+        """Turn the thermostat on."""
+        if HVACMode.AUTO in self._operation_list:
+            self.set_hvac_mode(HVACMode.AUTO)
+        else:
+            for mode in self._operation_list:
+                if mode != HVACMode.OFF:
+                    self.set_hvac_mode(mode)
+                    return
 
     def resume_program(self):
         """Resume the thermostat schedule program."""
