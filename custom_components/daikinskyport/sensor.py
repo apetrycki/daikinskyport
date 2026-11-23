@@ -1,12 +1,4 @@
 """Support for Daikin Skyport sensors."""
-from homeassistant.const import (
-    PERCENTAGE,
-    UnitOfDensity,
-    UnitOfTemperature,
-    UnitOfPower,
-    UnitOfRatio,
-    UnitOfVolumeFlowRate
-)
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -19,7 +11,9 @@ from homeassistant.const import (
     CONCENTRATION_PARTS_PER_MILLION,
     PERCENTAGE,
     UnitOfPower,
+    UnitOfDensity,
     UnitOfTemperature,
+    UnitOfRatio,
     UnitOfVolumeFlowRate,
 )
 from homeassistant.core import HomeAssistant
