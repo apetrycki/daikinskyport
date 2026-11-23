@@ -31,6 +31,7 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 
 from . import DaikinSkyportData
@@ -378,8 +379,7 @@ async def async_setup_entry(
         schema=EFFICIENCY_SCHEMA,
     )
 
-
-class Thermostat(ClimateEntity):
+class Thermostat(ClimateEntity, RestoreEntity):
     """A thermostat class for Daikin Skyport Thermostats."""
 
     _attr_precision = PRECISION_TENTHS
@@ -402,6 +402,9 @@ class Thermostat(ClimateEntity):
         self._heat_setpoint = self.thermostat["hspActive"]
         self._attr_target_humidity = self.thermostat.get("humSP")
         self._hvac_mode = DAIKIN_HVAC_TO_HASS[self.thermostat["mode"]]
+        self._last_hvac_mode = (
+            self._hvac_mode if self._hvac_mode != HVACMode.OFF else None
+        )
         if DAIKIN_FAN_TO_HASS[self.thermostat["fanCirculate"]] == FAN_ON:
             self._fan_mode = DAIKIN_FAN_TO_HASS[
                 self.thermostat["fanCirculateSpeed"] + 3
@@ -449,6 +452,32 @@ class Thermostat(ClimateEntity):
         ]
         self.update_without_throttle = False
 
+    async def async_added_to_hass(self) -> None:
+        """Restore the last active HVAC mode when starting while off."""
+        await super().async_added_to_hass()
+        if self._last_hvac_mode is not None:
+            return
+        last_state = await self.async_get_last_state()
+        if last_state is None:
+            return
+        restored_mode = last_state.attributes.get("last_hvac_mode")
+        if restored_mode is None and last_state.state != HVACMode.OFF:
+            restored_mode = last_state.state
+        if (
+            isinstance(restored_mode, str)
+            and restored_mode != HVACMode.OFF
+            and restored_mode in self._operation_list
+        ):
+            self._last_hvac_mode = HVACMode(restored_mode)
+
+    def _update_hvac_mode(self, hvac_mode: HVACMode) -> None:
+        """Update current HVAC mode while preserving the last active non-off mode."""
+        if hvac_mode != HVACMode.OFF:
+            self._last_hvac_mode = hvac_mode
+        elif self._hvac_mode != HVACMode.OFF:
+            self._last_hvac_mode = self._hvac_mode
+        self._hvac_mode = hvac_mode
+
     async def async_update(self):
         """Get the latest state from the thermostat."""
         if self.update_without_throttle:
@@ -461,7 +490,7 @@ class Thermostat(ClimateEntity):
         self._cool_setpoint = self.thermostat["cspActive"]
         self._heat_setpoint = self.thermostat["hspActive"]
         self._attr_target_humidity = self.thermostat.get("humSP")
-        self._hvac_mode = DAIKIN_HVAC_TO_HASS[self.thermostat["mode"]]
+        self._update_hvac_mode(DAIKIN_HVAC_TO_HASS[self.thermostat["mode"]])
         if DAIKIN_FAN_TO_HASS[self.thermostat["fanCirculate"]] == FAN_ON:
             self._fan_mode = DAIKIN_FAN_TO_HASS[
                 self.thermostat["fanCirculateSpeed"] + 3
@@ -490,7 +519,16 @@ class Thermostat(ClimateEntity):
     @property
     def supported_features(self):
         """Return the list of supported features."""
-        features = SUPPORT_FLAGS
+        features = (
+            ClimateEntityFeature.PRESET_MODE
+            | ClimateEntityFeature.FAN_MODE
+            | ClimateEntityFeature.TURN_ON
+            | ClimateEntityFeature.TURN_OFF
+        )
+        if self.hvac_mode == HVACMode.AUTO:
+            features |= ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
+        elif self.hvac_mode in (HVACMode.HEAT, HVACMode.COOL):
+            features |= ClimateEntityFeature.TARGET_TEMPERATURE
         if self.thermostat.get("ctSystemCapHumidification", False):
             features |= ClimateEntityFeature.TARGET_HUMIDITY
         return features
@@ -653,6 +691,11 @@ class Thermostat(ClimateEntity):
             "outdoor_mode": outdoor_mode,
             "thermostat_unlocked": bool(self.thermostat["displayLockPIN"] == 0),
             "media_filter_days": self.thermostat["alertMediaAirFilterDays"],
+            "last_hvac_mode": (
+                self._last_hvac_mode.value
+                if self._last_hvac_mode is not None
+                else None
+            ),
         }
 
     def set_preset_mode(self, preset_mode):
@@ -806,8 +849,29 @@ class Thermostat(ClimateEntity):
             _LOGGER.error("Invalid mode for set_hvac_mode: %s", hvac_mode)
             return
         self.data.daikinskyport.set_hvac_mode(self.thermostat_index, daikin_value)
-        self._hvac_mode = hvac_mode
+        self._update_hvac_mode(hvac_mode)
         self.update_without_throttle = True
+
+    def turn_off(self) -> None:
+        """Turn the thermostat off."""
+        self.set_hvac_mode(HVACMode.OFF)
+
+    def turn_on(self) -> None:
+        """Turn the thermostat on, restoring the previous HVAC mode if available."""
+        if (
+            self._last_hvac_mode is not None
+            and self._last_hvac_mode != HVACMode.OFF
+            and self._last_hvac_mode in self._operation_list
+        ):
+            self.set_hvac_mode(self._last_hvac_mode)
+            return
+        if HVACMode.AUTO in self._operation_list:
+            self.set_hvac_mode(HVACMode.AUTO)
+            return
+        for mode in self._operation_list:
+            if mode != HVACMode.OFF:
+                self.set_hvac_mode(mode)
+                return
 
     def resume_program(self):
         """Resume the thermostat schedule program."""
