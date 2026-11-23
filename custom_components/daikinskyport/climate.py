@@ -399,8 +399,18 @@ class Thermostat(ClimateEntity, RestoreEntity):
         self.thermostat = thermostat
         self._name = self.thermostat["name"]
         self._attr_unique_id = f"{self.thermostat['id']}-climate"
-        self._cool_setpoint = self.thermostat["cspActive"]
-        self._heat_setpoint = self.thermostat["hspActive"]
+        if (
+            not self.thermostat["geofencingAway"]
+            and not self.thermostat["schedEnabled"]
+        ):
+            # With the schedule disabled the thermostat honors csp/hspHome, but the
+            # cloud keeps csp/hspActive mirroring csp/hspSched, so Active is not the
+            # setpoint actually in effect.
+            self._cool_setpoint = self.thermostat["cspHome"]
+            self._heat_setpoint = self.thermostat["hspHome"]
+        else:
+            self._cool_setpoint = self.thermostat["cspActive"]
+            self._heat_setpoint = self.thermostat["hspActive"]
         self._attr_target_humidity = self.thermostat.get("humSP")
         self._hvac_mode = DAIKIN_HVAC_TO_HASS[self.thermostat["mode"]]
         self._last_hvac_mode = (
@@ -488,8 +498,18 @@ class Thermostat(ClimateEntity, RestoreEntity):
             await self.data._async_update_data()
 
         self.thermostat = self.data.daikinskyport.get_thermostat(self.thermostat_index)
-        self._cool_setpoint = self.thermostat["cspActive"]
-        self._heat_setpoint = self.thermostat["hspActive"]
+        if (
+            not self.thermostat["geofencingAway"]
+            and not self.thermostat["schedEnabled"]
+        ):
+            # With the schedule disabled the thermostat honors csp/hspHome, but the
+            # cloud keeps csp/hspActive mirroring csp/hspSched, so Active is not the
+            # setpoint actually in effect.
+            self._cool_setpoint = self.thermostat["cspHome"]
+            self._heat_setpoint = self.thermostat["hspHome"]
+        else:
+            self._cool_setpoint = self.thermostat["cspActive"]
+            self._heat_setpoint = self.thermostat["hspActive"]
         self._attr_target_humidity = self.thermostat.get("humSP")
         self._update_hvac_mode(DAIKIN_HVAC_TO_HASS[self.thermostat["mode"]])
         if DAIKIN_FAN_TO_HASS[self.thermostat["fanCirculate"]] == FAN_ON:
