@@ -41,7 +41,7 @@ class DaikinSkyportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             result = await self.hass.async_add_executor_job(
                 daikinskyport.request_tokens
             )
-            if result is None:
+            if not result:
                 raise HomeAssistantError(
                     "Authentication failure. Verify username and password are correct."
                 )

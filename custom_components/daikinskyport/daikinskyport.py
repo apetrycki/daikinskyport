@@ -3,6 +3,7 @@
 import json
 import logging
 import os
+import time
 
 import requests
 from requests.adapters import HTTPAdapter
@@ -85,18 +86,13 @@ class DaikinSkyport(object):
         else:
             self.refresh_token = ""
 
-        # self.request_tokens()
-        # return
-
-        # self.update()
-
     def request_tokens(self):
         """Method to request API tokens from skyport"""
         url = "https://api.daikinskyport.com/users/auth/login"
         header = {"Accept": "application/json", "Content-Type": "application/json"}
         data = {"email": self.user_email, "password": self.user_password}
         try:
-            request = requests.post(url, headers=header, json=data)
+            request = requests.post(url, headers=header, json=data, timeout=(5, 30))
         except RequestException as e:
             logger.error(
                 "Error connecting to Daikin Skyport.  Possible connectivity outage."
@@ -128,7 +124,7 @@ class DaikinSkyport(object):
         url = "https://api.daikinskyport.com/users/auth/token"
         header = {"Accept": "application/json", "Content-Type": "application/json"}
         data = {"email": self.user_email, "refreshToken": self.refresh_token}
-        request = requests.post(url, headers=header, json=data)
+        request = requests.post(url, headers=header, json=data, timeout=(5, 30))
         if request.status_code == requests.codes.ok:
             json_data = request.json()
             self.access_token = json_data["accessToken"]
@@ -142,9 +138,8 @@ class DaikinSkyport(object):
                 request.text,
             )
             result = self.request_tokens()
-            if result is not None:
-                return True
-            return False
+            
+            return result
 
     def get_thermostats(self):
         """Set self.thermostats to a json list of thermostats from daikinskyport.com"""
@@ -160,7 +155,7 @@ class DaikinSkyport(object):
         http.mount("http://", adapter)
 
         try:
-            request = http.get(url, headers=header)
+            request = http.get(url, headers=header, timeout=(5, 30))
         except RequestException as e:
             logger.warn(
                 "Error connecting to Daikin Skyport.  Possible connectivity outage: %s",
@@ -216,7 +211,7 @@ class DaikinSkyport(object):
         http.mount("http://", adapter)
 
         try:
-            request = http.get(url, headers=header)
+            request = http.get(url, headers=header, timeout=(5, 30))
             request.raise_for_status()
         except requests.exceptions.HTTPError as e:
             if (
