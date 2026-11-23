@@ -26,6 +26,7 @@ from homeassistant.const import (
     ATTR_ENTITY_ID,
     ATTR_TEMPERATURE,
     PRECISION_TENTHS,
+    STATE_OFF,
     STATE_ON,
     UnitOfTemperature,
 )
@@ -399,53 +400,7 @@ class Thermostat(ClimateEntity, RestoreEntity):
         self.thermostat = thermostat
         self._name = self.thermostat["name"]
         self._attr_unique_id = f"{self.thermostat['id']}-climate"
-        if (
-            not self.thermostat["geofencingAway"]
-            and not self.thermostat["schedEnabled"]
-        ):
-            # With the schedule disabled the thermostat honors csp/hspHome, but the
-            # cloud keeps csp/hspActive mirroring csp/hspSched, so Active is not the
-            # setpoint actually in effect.
-            self._cool_setpoint = self.thermostat["cspHome"]
-            self._heat_setpoint = self.thermostat["hspHome"]
-        else:
-            self._cool_setpoint = self.thermostat["cspActive"]
-            self._heat_setpoint = self.thermostat["hspActive"]
-        self._attr_target_humidity = self.thermostat.get("humSP")
-        self._hvac_mode = DAIKIN_HVAC_TO_HASS[self.thermostat["mode"]]
-        self._last_hvac_mode = (
-            self._hvac_mode if self._hvac_mode != HVACMode.OFF else None
-        )
-        if DAIKIN_FAN_TO_HASS[self.thermostat["fanCirculate"]] == FAN_ON:
-            self._fan_mode = DAIKIN_FAN_TO_HASS[
-                self.thermostat["fanCirculateSpeed"] + 3
-            ]
-        else:
-            self._fan_mode = DAIKIN_FAN_TO_HASS[self.thermostat["fanCirculate"]]
-        self._fan_speed = DAIKIN_FAN_SPEED_TO_HASS[self.thermostat["fanCirculateSpeed"]]
-        if self.thermostat["geofencingAway"]:
-            self._preset_mode = PRESET_AWAY
-        elif self.thermostat["schedOverride"] == 1:
-            self._preset_mode = PRESET_TEMP_HOLD
-        elif self.thermostat["schedEnabled"]:
-            self._preset_mode = PRESET_SCHEDULE
-        else:
-            self._preset_mode = PRESET_MANUAL
-
-        self._operation_list = []
-        if self.thermostat["ctSystemCapHeat"]:
-            self._operation_list.append(HVACMode.HEAT)
-        if (
-            "ctOutdoorNoofCoolStages" in self.thermostat
-            and self.thermostat["ctOutdoorNoofCoolStages"] > 0
-        ) or (
-            "P1P2S21CoolingCapability" in self.thermostat
-            and self.thermostat["P1P2S21CoolingCapability"] is True
-        ):
-            self._operation_list.append(HVACMode.COOL)
-        if len(self._operation_list) == 2:
-            self._operation_list.insert(0, HVACMode.AUTO)
-        self._operation_list.append(HVACMode.OFF)
+        self._apply_thermostat()
 
         self._preset_modes = {
             PRESET_SCHEDULE,
@@ -462,6 +417,62 @@ class Thermostat(ClimateEntity, RestoreEntity):
             FAN_SCHEDULE,
         ]
         self.update_without_throttle = False
+
+    def _apply_thermostat(self):
+        """Apply state from either the One/One+ or One Lite API schema."""
+        if (
+            not self.thermostat["geofencingAway"]
+            and not self.thermostat["schedEnabled"]
+        ):
+            # With the schedule disabled the thermostat honors csp/hspHome, but the
+            # cloud keeps csp/hspActive mirroring csp/hspSched, so Active is not the
+            # setpoint actually in effect.
+            self._cool_setpoint = self.thermostat["cspHome"]
+            self._heat_setpoint = self.thermostat["hspHome"]
+        else:
+            self._cool_setpoint = self._value("cspActive", "coolSP")
+            self._heat_setpoint = self._value("hspActive", "heatSP")
+        self._attr_target_humidity = self.thermostat.get("humSP")
+        self._hvac_mode = DAIKIN_HVAC_TO_HASS.get(
+            self.thermostat.get("mode"), HVACMode.OFF
+        )
+        self._last_hvac_mode = (
+            self._hvac_mode if self._hvac_mode != HVACMode.OFF else None
+        )
+        fan_setting = self.thermostat.get("fanCirculate", 0)
+        fan_speed = self.thermostat.get("fanCirculateSpeed", 0)
+        if fan_setting == 1:
+            self._fan_mode = DAIKIN_FAN_TO_HASS.get(fan_speed + 3, FAN_ON)
+        else:
+            self._fan_mode = DAIKIN_FAN_TO_HASS.get(fan_setting, FAN_AUTO)
+        self._fan_speed = DAIKIN_FAN_SPEED_TO_HASS.get(fan_speed, FAN_LOW)
+        if self.thermostat.get("geofencingAway", False):
+            self._preset_mode = PRESET_AWAY
+        elif self.thermostat.get("schedOverride", 0) == 1:
+            self._preset_mode = PRESET_TEMP_HOLD
+        elif self.thermostat.get("schedEnabled", False):
+            self._preset_mode = PRESET_SCHEDULE
+        else:
+            self._preset_mode = PRESET_MANUAL
+
+        self._operation_list = []
+        if self.thermostat.get("ctSystemCapHeat", True):
+            self._operation_list.append(HVACMode.HEAT)
+        if self.thermostat.get("ctOutdoorNoofCoolStages", 0) > 0 or self.thermostat.get(
+            "P1P2S21CoolingCapability", False
+        ):
+            self._operation_list.append(HVACMode.COOL)
+        if len(self._operation_list) == 2:
+            self._operation_list.insert(0, HVACMode.AUTO)
+        self._operation_list.append(HVACMode.OFF)
+
+    def _value(self, skyport_key, onelite_key=None, default=None):
+        """Return a Skyport value, falling back to its One Lite field name."""
+        if skyport_key in self.thermostat:
+            return self.thermostat[skyport_key]
+        if onelite_key and onelite_key in self.thermostat:
+            return self.thermostat[onelite_key]
+        return default
 
     async def async_added_to_hass(self) -> None:
         """Restore the last active HVAC mode when starting while off."""
@@ -498,35 +509,7 @@ class Thermostat(ClimateEntity, RestoreEntity):
             await self.data._async_update_data()
 
         self.thermostat = self.data.daikinskyport.get_thermostat(self.thermostat_index)
-        if (
-            not self.thermostat["geofencingAway"]
-            and not self.thermostat["schedEnabled"]
-        ):
-            # With the schedule disabled the thermostat honors csp/hspHome, but the
-            # cloud keeps csp/hspActive mirroring csp/hspSched, so Active is not the
-            # setpoint actually in effect.
-            self._cool_setpoint = self.thermostat["cspHome"]
-            self._heat_setpoint = self.thermostat["hspHome"]
-        else:
-            self._cool_setpoint = self.thermostat["cspActive"]
-            self._heat_setpoint = self.thermostat["hspActive"]
-        self._attr_target_humidity = self.thermostat.get("humSP")
-        self._update_hvac_mode(DAIKIN_HVAC_TO_HASS[self.thermostat["mode"]])
-        if DAIKIN_FAN_TO_HASS[self.thermostat["fanCirculate"]] == FAN_ON:
-            self._fan_mode = DAIKIN_FAN_TO_HASS[
-                self.thermostat["fanCirculateSpeed"] + 3
-            ]
-        else:
-            self._fan_mode = DAIKIN_FAN_TO_HASS[self.thermostat["fanCirculate"]]
-        self._fan_speed = DAIKIN_FAN_SPEED_TO_HASS[self.thermostat["fanCirculateSpeed"]]
-        if self.thermostat["geofencingAway"]:
-            self._preset_mode = PRESET_AWAY
-        elif self.thermostat["schedOverride"] == 1:
-            self._preset_mode = PRESET_TEMP_HOLD
-        elif self.thermostat["schedEnabled"]:
-            self._preset_mode = PRESET_SCHEDULE
-        else:
-            self._preset_mode = PRESET_MANUAL
+        self._apply_thermostat()
 
     @property
     def device_info(self) -> DeviceInfo:
@@ -546,6 +529,8 @@ class Thermostat(ClimateEntity, RestoreEntity):
             | ClimateEntityFeature.TURN_ON
             | ClimateEntityFeature.TURN_OFF
         )
+        if self.thermostat.get("_daikin_schema") == "onelite":
+            features &= ~ClimateEntityFeature.FAN_MODE
         if self.hvac_mode == HVACMode.AUTO:
             features |= ClimateEntityFeature.TARGET_TEMPERATURE_RANGE
         elif self.hvac_mode in (HVACMode.HEAT, HVACMode.COOL):
@@ -562,7 +547,7 @@ class Thermostat(ClimateEntity, RestoreEntity):
     @property
     def native_current_temperature(self) -> float:
         """Return the current temperature."""
-        return self.thermostat["tempIndoor"]
+        return self._value("tempIndoor", "spaceTemp")
 
     @property
     def native_target_temperature_low(self):
@@ -592,12 +577,18 @@ class Thermostat(ClimateEntity, RestoreEntity):
     @property
     def fan(self):
         """Return the current fan status."""
+        if self.thermostat.get("_daikin_schema") == "onelite":
+            return (
+                STATE_ON
+                if self.thermostat.get("fanStatus") or self.thermostat.get("gTerminal")
+                else STATE_OFF
+            )
         if (
             "ctAHFanCurrentDemandStatus" in self.thermostat
             and self.thermostat["ctAHFanCurrentDemandStatus"] > 0
         ):
             return STATE_ON
-        return HVACMode.OFF
+        return STATE_OFF
 
     @property
     def fan_mode(self):
@@ -632,12 +623,30 @@ class Thermostat(ClimateEntity, RestoreEntity):
     @property
     def current_humidity(self) -> Optional[int]:
         """Return the current humidity."""
-        return self.thermostat["humIndoor"]
+        return self._value("humIndoor", "spaceHum")
 
     @property
     def hvac_action(self):
         """Return current HVAC action."""
-        return DAIKIN_HVAC_ACTION_TO_HASS[self.thermostat["equipmentStatus"]]
+        if self.thermostat.get("_daikin_schema") == "onelite":
+            # The D2271 reports eqStatus=2 while actively cooling.  Its live
+            # Y terminals are the authoritative cooling-stage indicators.
+            if self.thermostat.get("y1Terminal") or self.thermostat.get("y2Terminal"):
+                return HVACAction.COOLING
+            # eqStatus=3 also shows up in Cool mode with no Y terminal on (the fan-only
+            # phase between compressor runs), so it only means heating when the
+            # thermostat is in a heating mode or a heat stage (W2) is on.
+            if self._value("equipmentStatus", "eqStatus") == 3 and (
+                self._hvac_mode in (HVACMode.HEAT, HVACMode.AUTO)
+                or self.thermostat.get("w2Terminal")
+            ):
+                return HVACAction.HEATING
+            if self.thermostat.get("fanStatus") or self.thermostat.get("gTerminal"):
+                return HVACAction.FAN
+            return HVACAction.IDLE
+        return DAIKIN_HVAC_ACTION_TO_HASS.get(
+            self._value("equipmentStatus", "eqStatus")
+        )
 
     @property
     def extra_state_attributes(self):
@@ -697,7 +706,7 @@ class Thermostat(ClimateEntity, RestoreEntity):
 
         return {
             "fan": self.fan,
-            "schedule_mode": self.thermostat["schedEnabled"],
+            "schedule_mode": self.thermostat.get("schedEnabled"),
             "fan_cfm": fan_cfm,
             "fan_demand": fan_demand,
             "cooling_demand": cooling_demand,
@@ -705,13 +714,13 @@ class Thermostat(ClimateEntity, RestoreEntity):
             "heatpump_demand": heatpump_demand,
             "dehumidification_demand": dehumidification_demand,
             "humidification_demand": humidification_demand,
-            "thermostat_version": self.thermostat["statFirmware"],
-            "night_mode_active": self.thermostat["nightModeActive"],
-            "night_mode_enabled": self.thermostat["nightModeEnabled"],
+            "thermostat_version": self.thermostat.get("statFirmware"),
+            "night_mode_active": self.thermostat.get("nightModeActive"),
+            "night_mode_enabled": self.thermostat.get("nightModeEnabled"),
             "indoor_mode": indoor_mode,
             "outdoor_mode": outdoor_mode,
-            "thermostat_unlocked": bool(self.thermostat["displayLockPIN"] == 0),
-            "media_filter_days": self.thermostat["alertMediaAirFilterDays"],
+            "thermostat_unlocked": self.thermostat.get("displayLockPIN") == 0,
+            "media_filter_days": self.thermostat.get("alertMediaAirFilterDays"),
             "last_hvac_mode": (
                 self._last_hvac_mode.value if self._last_hvac_mode is not None else None
             ),
@@ -727,7 +736,7 @@ class Thermostat(ClimateEntity, RestoreEntity):
 
         elif preset_mode == PRESET_SCHEDULE:
             self.data.daikinskyport.set_away(self.thermostat_index, False)
-            self.resume_program()
+            self.data.daikinskyport.resume_program(self.thermostat_index)
 
         elif preset_mode == PRESET_MANUAL:
             self.data.daikinskyport.set_away(self.thermostat_index, False)
@@ -850,8 +859,9 @@ class Thermostat(ClimateEntity, RestoreEntity):
         else:
             _LOGGER.error("Missing valid arguments for set_temperature in %s", kwargs)
 
-        self._cool_setpoint = high_temp
-        self._heat_setpoint = low_temp
+        # set_auto_temp_hold/set_temp_hold update the appropriate cached
+        # setpoints.  Do not overwrite them with None for a single-setpoint
+        # heat or cool request while the next API refresh is pending.
 
     def set_humidity(self, humidity):
         """Set the humidity level."""
@@ -891,11 +901,6 @@ class Thermostat(ClimateEntity, RestoreEntity):
             if mode != HVACMode.OFF:
                 self.set_hvac_mode(mode)
                 return
-
-    def resume_program(self):
-        """Resume the thermostat schedule program."""
-        self.data.daikinskyport.resume_program(self.thermostat_index)
-        self.update_without_throttle = True
 
     def set_fan_schedule(self, start=None, stop=None, interval=None, speed=None):
         """Set the thermostat fan schedule."""
