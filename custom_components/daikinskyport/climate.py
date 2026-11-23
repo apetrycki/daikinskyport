@@ -432,13 +432,13 @@ class Thermostat(ClimateEntity, RestoreEntity):
         else:
             self._cool_setpoint = self._value("cspActive", "coolSP")
             self._heat_setpoint = self._value("hspActive", "heatSP")
-            self._attr_target_humidity = self.thermostat.get("humSP")
-            self._hvac_mode = DAIKIN_HVAC_TO_HASS.get(
-                self.thermostat.get("mode"), HVACMode.OFF
-            )
-            self._last_hvac_mode = (
-                self._hvac_mode if self._hvac_mode != HVACMode.OFF else None
-            )
+        self._attr_target_humidity = self.thermostat.get("humSP")
+        self._hvac_mode = DAIKIN_HVAC_TO_HASS.get(
+            self.thermostat.get("mode"), HVACMode.OFF
+        )
+        self._last_hvac_mode = (
+            self._hvac_mode if self._hvac_mode != HVACMode.OFF else None
+        )
         fan_setting = self.thermostat.get("fanCirculate", 0)
         fan_speed = self.thermostat.get("fanCirculateSpeed", 0)
         if fan_setting == 1:
