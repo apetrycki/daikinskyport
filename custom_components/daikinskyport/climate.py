@@ -736,7 +736,7 @@ class Thermostat(ClimateEntity, RestoreEntity):
 
         elif preset_mode == PRESET_SCHEDULE:
             self.data.daikinskyport.set_away(self.thermostat_index, False)
-            self.resume_program()
+            self.data.daikinskyport.resume_program(self.thermostat_index)
 
         elif preset_mode == PRESET_MANUAL:
             self.data.daikinskyport.set_away(self.thermostat_index, False)
@@ -901,11 +901,6 @@ class Thermostat(ClimateEntity, RestoreEntity):
             if mode != HVACMode.OFF:
                 self.set_hvac_mode(mode)
                 return
-
-    def resume_program(self):
-        """Resume the thermostat schedule program."""
-        self.data.daikinskyport.resume_program(self.thermostat_index)
-        self.update_without_throttle = True
 
     def set_fan_schedule(self, start=None, stop=None, interval=None, speed=None):
         """Set the thermostat fan schedule."""

@@ -875,6 +875,9 @@ class DaikinSkyport(object):
             self._normalise_thermostat(self.thermostats[index])
             return self.make_request(index, body, "resume One Lite program")
         body = {"schedEnabled": True, "schedOverride": 0, "geofencingAway": False}
+        self.thermostats[index]["schedEnabled"] = True
+        self.thermostats[index]["schedOverride"] = 0
+        self.thermostats[index]["geofencingAway"] = False
 
         log_msg_action = "resume program"
         return self.make_request(index, body, log_msg_action)
