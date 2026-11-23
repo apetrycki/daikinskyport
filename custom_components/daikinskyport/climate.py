@@ -383,7 +383,7 @@ class Thermostat(ClimateEntity):
     """A thermostat class for Daikin Skyport Thermostats."""
 
     _attr_precision = PRECISION_TENTHS
-    _attr_temperature_unit = UnitOfTemperature.CELSIUS
+    _attr_native_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_fan_modes = [FAN_AUTO, FAN_ON, FAN_LOW, FAN_MEDIUM, FAN_HIGH, FAN_SCHEDULE]
     _attr_min_humidity = 25
     _attr_max_humidity = 65
@@ -501,26 +501,26 @@ class Thermostat(ClimateEntity):
         return self.thermostat["name"]
 
     @property
-    def current_temperature(self) -> float:
+    def native_current_temperature(self) -> float:
         """Return the current temperature."""
         return self.thermostat["tempIndoor"]
 
     @property
-    def target_temperature_low(self):
+    def native_target_temperature_low(self):
         """Return the lower bound temperature we try to reach."""
         if self.hvac_mode == HVACMode.AUTO:
             return self._heat_setpoint
         return None
 
     @property
-    def target_temperature_high(self):
+    def native_target_temperature_high(self):
         """Return the upper bound temperature we try to reach."""
         if self.hvac_mode == HVACMode.AUTO:
             return self._cool_setpoint
         return None
 
     @property
-    def target_temperature(self):
+    def native_target_temperature(self):
         """Return the temperature we try to reach."""
         if self.hvac_mode == HVACMode.AUTO:
             return None
