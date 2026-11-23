@@ -10,17 +10,26 @@
                     "email": "Email",
                     "password": "Password"
                 }
-            }
+            },
+			"reconfigure": {
+				"title": "Change Daikin Skyport Password",
+				"description": "Enter your new Daikin Skyport account password.",
+				"data": {
+					"password": "New Password"
+				}
+			}
         },
         "error": {
             "failure": "An error ocurred, please check the logs",
             "auth": "Username/Password is wrong.",
             "name_exists": "Configuration already exists.",
             "invalid_username": "Invalid Email",
-            "invalid_password": "Invalid Password"
+            "invalid_password": "Invalid Password",
+			"invalid_auth": "Authentication failed. Verify your password and try again."
         },
         "abort": {
-            "single_instance_allowed": "Only a single configuration of Daikin Skyport is allowed."
+            "single_instance_allowed": "Only a single configuration of Daikin Skyport is allowed.",
+			"reconfigure_successful": "Password successfully updated."
         }
     }
 }

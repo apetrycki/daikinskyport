@@ -71,3 +71,49 @@ class DaikinSkyportConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     def async_get_options_flow(config_entry: ConfigEntry) -> SchemaOptionsFlowHandler:
         """Options callback for DaikinSkyport."""
         return SchemaOptionsFlowHandler(config_entry, OPTIONS_FLOW)
+
+    async def async_step_reconfigure(self, user_input=None):
+        """Allow the user to change their Daikin Skyport password."""
+        entry = self._get_reconfigure_entry()
+
+        if user_input is not None:
+            daikinskyport = DaikinSkyport(
+                config={
+                    "EMAIL": entry.data[CONF_EMAIL],
+                    "PASSWORD": user_input[CONF_PASSWORD],
+                }
+            )
+
+            result = await self.hass.async_add_executor_job(
+                daikinskyport.request_tokens
+            )
+
+            if not result:
+                return self.async_show_form(
+                    step_id="reconfigure",
+                    data_schema=vol.Schema(
+                        {
+                            vol.Required(CONF_PASSWORD): str,
+                        }
+                    ),
+                    errors={"base": "invalid_auth"},
+                )
+
+            # Update the existing entry, preserving its other settings.
+            return self.async_update_reload_and_abort(
+                entry,
+                data_updates={
+                    CONF_PASSWORD: user_input[CONF_PASSWORD],
+                    CONF_ACCESS_TOKEN: daikinskyport.access_token,
+                    CONF_REFRESH_TOKEN: daikinskyport.refresh_token,
+                },
+            )
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_PASSWORD): str,
+                }
+            ),
+        )
