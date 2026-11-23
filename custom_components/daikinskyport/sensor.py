@@ -1,5 +1,12 @@
 """Support for Daikin Skyport sensors."""
-
+from homeassistant.const import (
+    PERCENTAGE,
+    UnitOfDensity,
+    UnitOfTemperature,
+    UnitOfPower,
+    UnitOfRatio,
+    UnitOfVolumeFlowRate
+)
 from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorEntity,
@@ -43,37 +50,37 @@ SENSOR_TYPES = {
     },
     "CO2": {
         "device_class": SensorDeviceClass.CO2,
-        "native_unit_of_measurement": CONCENTRATION_PARTS_PER_MILLION,
+        "native_unit_of_measurement": UnitOfRatio.PARTS_PER_MILLION,
         "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:periodic-table-co2",
     },
     "VOC": {
         "device_class": SensorDeviceClass.VOLATILE_ORGANIC_COMPOUNDS,
-        "native_unit_of_measurement": CONCENTRATION_PARTS_PER_BILLION,
+        "native_unit_of_measurement": UnitOfRatio.PARTS_PER_BILLION,
         "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:cloud",
     },
     "ozone": {
         "device_class": SensorDeviceClass.OZONE,
-        "native_unit_of_measurement": CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
+        "native_unit_of_measurement": UnitOfDensity.MICROGRAMS_PER_CUBIC_METER,
         "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:cloud",
     },
     "particle": {
         "device_class": SensorDeviceClass.PM1,
-        "native_unit_of_measurement": CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
+        "native_unit_of_measurement": UnitOfDensity.MICROGRAMS_PER_CUBIC_METER,
         "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:cloud",
     },
     "PM25": {
         "device_class": SensorDeviceClass.PM25,
-        "native_unit_of_measurement": CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
+        "native_unit_of_measurement": UnitOfDensity.MICROGRAMS_PER_CUBIC_METER,
         "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:cloud",
     },
     "PM10": {
         "device_class": SensorDeviceClass.PM10,
-        "native_unit_of_measurement": CONCENTRATION_MICROGRAMS_PER_CUBIC_METER,
+        "native_unit_of_measurement": UnitOfDensity.MICROGRAMS_PER_CUBIC_METER,
         "state_class": SensorStateClass.MEASUREMENT,
         "icon": "mdi:cloud",
     },

@@ -183,8 +183,8 @@ THERMOSTAT_SCHEDULE_SCHEMA = vol.Schema(
         vol.Optional(ATTR_SCHEDULE_PART): cv.positive_int,
         vol.Optional(ATTR_SCHEDULE_PART_ENABLED): cv.boolean,
         vol.Optional(ATTR_SCHEDULE_PART_LABEL): cv.string,
-        vol.Optional(ATTR_SCHEDULE_HEATING_SETPOINT): cv.positive_int,
-        vol.Optional(ATTR_SCHEDULE_COOLING_SETPOINT): cv.positive_int,
+        vol.Optional(ATTR_SCHEDULE_HEATING_SETPOINT): cv.positive_float,
+        vol.Optional(ATTR_SCHEDULE_COOLING_SETPOINT): cv.positive_float,
     }
 )
 
@@ -385,6 +385,8 @@ class Thermostat(ClimateEntity):
     _attr_precision = PRECISION_TENTHS
     _attr_temperature_unit = UnitOfTemperature.CELSIUS
     _attr_fan_modes = [FAN_AUTO, FAN_ON, FAN_LOW, FAN_MEDIUM, FAN_HIGH, FAN_SCHEDULE]
+    _attr_min_humidity = 25
+    _attr_max_humidity = 65
     _attr_name = None
     _attr_has_entity_name = True
     _enable_turn_on_off_backwards_compatibility = False
@@ -398,6 +400,7 @@ class Thermostat(ClimateEntity):
         self._attr_unique_id = f"{self.thermostat['id']}-climate"
         self._cool_setpoint = self.thermostat["cspActive"]
         self._heat_setpoint = self.thermostat["hspActive"]
+        self._attr_target_humidity = self.thermostat.get("humSP")
         self._hvac_mode = DAIKIN_HVAC_TO_HASS[self.thermostat["mode"]]
         if DAIKIN_FAN_TO_HASS[self.thermostat["fanCirculate"]] == FAN_ON:
             self._fan_mode = DAIKIN_FAN_TO_HASS[
@@ -457,6 +460,7 @@ class Thermostat(ClimateEntity):
         self.thermostat = self.data.daikinskyport.get_thermostat(self.thermostat_index)
         self._cool_setpoint = self.thermostat["cspActive"]
         self._heat_setpoint = self.thermostat["hspActive"]
+        self._attr_target_humidity = self.thermostat.get("humSP")
         self._hvac_mode = DAIKIN_HVAC_TO_HASS[self.thermostat["mode"]]
         if DAIKIN_FAN_TO_HASS[self.thermostat["fanCirculate"]] == FAN_ON:
             self._fan_mode = DAIKIN_FAN_TO_HASS[
@@ -486,7 +490,10 @@ class Thermostat(ClimateEntity):
     @property
     def supported_features(self):
         """Return the list of supported features."""
-        return SUPPORT_FLAGS
+        features = SUPPORT_FLAGS
+        if self.thermostat.get("ctSystemCapHumidification", False):
+            features |= ClimateEntityFeature.TARGET_HUMIDITY
+        return features
 
     @property
     def name(self):
@@ -787,6 +794,8 @@ class Thermostat(ClimateEntity):
     def set_humidity(self, humidity):
         """Set the humidity level."""
         self.data.daikinskyport.set_humidity(self.thermostat_index, humidity)
+        self._attr_target_humidity = humidity
+        self.update_without_throttle = True
 
     def set_hvac_mode(self, hvac_mode):
         """Set HVAC mode (auto, auxHeatOnly, cool, heat, off)."""

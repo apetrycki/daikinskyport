@@ -170,6 +170,7 @@ class DaikinSkyport(object):
         if request.status_code == requests.codes.ok:
             self.authenticated = True
             self.thermostatlist = request.json()
+            
             for thermostat in self.thermostatlist:
                 overwrite = False
                 thermostat_info = self.get_thermostat_info(thermostat["id"])
@@ -181,9 +182,15 @@ class DaikinSkyport(object):
                 for index in range(len(self.thermostats)):
                     if thermostat["id"] == self.thermostats[index]["id"]:
                         overwrite = True
+                        
+                        if 'delayed_reset_timestamp' in self.thermostats[index]:
+                            thermostat_info['delayed_reset_timestamp'] = self.thermostats[index]['delayed_reset_timestamp']
+                        
                         self.thermostats[index] = thermostat_info
                 if not overwrite:
+                    thermostat_info['delayed_reset_timestamp'] = None
                     self.thermostats.append(thermostat_info)
+
             return self.thermostats
         else:
             self.authenticated = False
@@ -558,7 +565,10 @@ class DaikinSkyport(object):
             logger.debug("Skipping update due to setting change")
             self.skip_next = False
             return
+        
         result = self.get_thermostats()
+        self.check_and_perform_delayed_resets()
+
         return result
 
     def make_request(self, index, body, log_msg_action, *, retry_count=0):
@@ -637,11 +647,58 @@ class DaikinSkyport(object):
         return self.make_request(index, body, log_msg_action)
 
     def set_fan_mode(self, index, fan_mode):
-        """Set fan mode. Values: auto (0), schedule (2), on (1)"""
-        body = {"fanCirculate": fan_mode}
+        """ Set fan mode. Values: auto (0), schedule (2), on (1) """
+
+        # Map fan modes to P1P2 switch values
+        FAN_MODE_TO_SW = {0: 2, 1: 1}
+        switch_value = FAN_MODE_TO_SW.get(fan_mode, 15)
+
+        body = {
+            "fanCirculate": fan_mode,
+            "P1P2FieldSettingModeNumber": 12,
+            "P1P2FieldSettingUnitNumChangeRequest": True,
+            "P1P2SentFieldSettingSW3": switch_value,
+            "P1P2SentFieldSettingSW6": switch_value
+        }
+
         log_msg_action = "set fan mode"
         self.thermostats[index]["fanCirculate"] = fan_mode
-        return self.make_request(index, body, log_msg_action)
+        
+        # Send initial request
+        result = self.make_request(index, body, log_msg_action)
+        
+        # Send delayed reset request
+        if result and result.status_code == requests.codes.ok:
+            # Mark this thermostat for delayed reset
+            # The coordinator will handle the actual reset after 15 seconds
+            self.thermostats[index]["delayed_reset_timestamp"] = time.time()
+            logger.debug("Fan mode set successfully, marked for delayed reset")
+        
+        return result
+
+    def check_and_perform_delayed_resets(self):
+        """Check if any thermostats need delayed resets and perform them."""
+        current_time = time.time()
+        
+        for index, thermostat in enumerate(self.thermostats):
+            if thermostat.get("delayed_reset_timestamp"):
+                # Check if 15 seconds have passed
+                if current_time - thermostat["delayed_reset_timestamp"] >= 15:
+                    logger.debug(f"Performing delayed reset for thermostat {index}")
+                    
+                    # Perform the delayed reset
+                    reset_body = {
+                        "P1P2FieldSettingModeNumber": 0,
+                        "P1P2FieldSettingUnitNumChangeRequest": False,
+                        "P1P2SentFieldSettingSW3": 15,
+                        "P1P2SentFieldSettingSW6": 15
+                    }
+                    
+                    reset_log_msg = "reset P1P2 fields"
+                    self.make_request(index, reset_body, reset_log_msg)
+                    
+                    # Clear the delayed reset
+                    thermostat["delayed_reset_timestamp"] = None
 
     def set_fan_speed(self, index, fan_speed):
         """Set fan speed. Values: low (0), medium (1), high (2)"""
