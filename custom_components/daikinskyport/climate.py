@@ -31,8 +31,8 @@ from homeassistant.const import (
 )
 from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 
 from . import DaikinSkyportData
 from .const import (
@@ -379,6 +379,7 @@ async def async_setup_entry(
         schema=EFFICIENCY_SCHEMA,
     )
 
+
 class Thermostat(ClimateEntity, RestoreEntity):
     """A thermostat class for Daikin Skyport Thermostats."""
 
@@ -692,9 +693,7 @@ class Thermostat(ClimateEntity, RestoreEntity):
             "thermostat_unlocked": bool(self.thermostat["displayLockPIN"] == 0),
             "media_filter_days": self.thermostat["alertMediaAirFilterDays"],
             "last_hvac_mode": (
-                self._last_hvac_mode.value
-                if self._last_hvac_mode is not None
-                else None
+                self._last_hvac_mode.value if self._last_hvac_mode is not None else None
             ),
         }
 
